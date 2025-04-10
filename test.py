@@ -1,5 +1,6 @@
 from systems.lindivs import LinDivs
 from systems.lineqs import LinEqs
+from systems.linineqs import LinIneqs
 
 
 def main():
@@ -11,7 +12,14 @@ def main():
 
     leqs = LinEqs(tuple([(1, -1, 0, 0), (0, 1, -2, 0)]))
     print(str(leqs))
-    leqs.solutions()
+    print("Solutions:")
+    print(leqs.solutions())
+    
+    linqs = LinIneqs(tuple([(1, -1, 0, 0), (0, 1, -2, 0)]),
+                     tuple([(-1, 0, -1, 10)]))
+    print(str(linqs))
+    print("Solutions:")
+    print(linqs.solutions())
 
 
 if __name__ == "__main__":
