@@ -1,4 +1,5 @@
 from systems.linineqs import LinIneqs
+from systems.matutils import vec2str
 
 type Mat = tuple[tuple[int, ...], ...]
 
@@ -7,8 +8,8 @@ class LinDivs(LinIneqs):
     def __init__(self,
                  divisors: Mat,
                  dividends: Mat,
-                 eqconstrs: Mat,
-                 ineqconstrs: Mat):
+                 eqconstrs: Mat = tuple(),
+                 ineqconstrs: Mat = tuple()):
         assert all([len(f) == len(a) for f in divisors for a in eqconstrs])
         LinIneqs.__init__(self, eqconstrs, ineqconstrs)
         assert len(divisors) == len(dividends)
@@ -17,23 +18,6 @@ class LinDivs(LinIneqs):
         self.G = dividends
 
     def __str__(self):
-        s = ""
-        for (a, b) in zip(self.F, self.G):
-            for i, c in enumerate(a):
-                i += 1
-                if i == len(a):
-                    s += " + " + str(c) + " | "
-                elif i == 1:
-                    s += str(c) + "x" + str(i)
-                else:
-                    s += " + " + str(c) + "x" + str(i)
-            for i, c in enumerate(b):
-                i += 1
-                if i == len(b):
-                    s += " + " + str(c)
-                elif i == 1:
-                    s += str(c) + "x" + str(i)
-                else:
-                    s += " + " + str(c) + "x" + str(i)
-            s += "\n"
-        return LinIneqs.__str__(self) + s
+        divs = [vec2str(f) + " | " + vec2str(g)
+                for (f, g) in zip(self.F, self.G)]
+        return LinIneqs.__str__(self) + "\n" + "\n".join(divs)
