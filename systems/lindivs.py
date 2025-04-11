@@ -20,4 +20,7 @@ class LinDivs(LinIneqs):
     def __str__(self):
         divs = [vec2str(f) + " | " + vec2str(g)
                 for (f, g) in zip(self.F, self.G)]
-        return LinIneqs.__str__(self) + "\n" + "\n".join(divs)
+        s = LinIneqs.__str__(self)
+        if len(s) != 0:
+            s += "\n"
+        return s + "\n".join(divs)

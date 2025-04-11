@@ -14,7 +14,10 @@ class LinIneqs(LinEqs):
 
     def __str__(self):
         ineqs = [vec2str(b) + " <= 0" for b in self.B]
-        return LinEqs.__str__(self) + "\n" + "\n".join(ineqs)
+        s = LinEqs.__str__(self)
+        if len(s) != 0:
+            s += "\n"
+        return s + "\n".join(ineqs)
 
     def solutions(self):
         # We first need to determine how many extra vars are needed
