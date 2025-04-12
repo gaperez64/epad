@@ -18,4 +18,17 @@ class TestMatutils:
             "10x1 + 20x2 + 30 | 11x1 + 22x2 + 33"
 
     def test_affxvars(self):
-        pass
+        leqs = LinEqs(tuple([(1, -1, 0, 0), (0, 1, -2, 0)]))
+        bases, periods = leqs.solutions()
+        assert len(bases) == 1
+        assert len(periods) == 1
+        assert bases[0] == tuple([0, 0, 0])
+        assert periods[0] == tuple([2, 2, 1])
+        r = affxvars(tuple([tuple([1, 1, 0, 0])]),
+                     bases[0], periods)
+        assert len(r) == 1
+        assert r[0] == tuple([4, 0])
+        r = affxvars(tuple([tuple([1, 0, 1, 0])]),
+                     bases[0], periods)
+        assert len(r) == 1
+        assert r[0] == tuple([3, 0])

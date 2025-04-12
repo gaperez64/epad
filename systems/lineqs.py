@@ -37,7 +37,7 @@ class LinEqs:
                     linpoly += str(c) * indets[i]
         while s.check() != z3.unsat:
             m = s.model()
-            vec = tuple([m[indets[i]] for i in range(nvars)])
+            vec = tuple([int(m[indets[i]].as_string()) for i in range(nvars)])
             periods.append(vec)
             s.add(z3.Or([indets[i] < vec[i] for i in range(nvars)]))
         s.pop()
@@ -60,7 +60,7 @@ class LinEqs:
                     linpoly += str(c) * indets[i]
         while s.check() != z3.unsat:
             m = s.model()
-            vec = tuple([m[indets[i]] for i in range(nvars)])
+            vec = tuple([int(m[indets[i]].as_string()) for i in range(nvars)])
             bases.append(vec)
             s.add(z3.Or([indets[i] < vec[i] for i in range(nvars)]))
 

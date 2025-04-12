@@ -20,7 +20,7 @@ def vec2str(v: Vec) -> str:
 
 def affxvars(M: Mat, base: Vec, periods: Vecs) -> Mat:
     # Unpack M into numpy Ax + c
-    A = np.array([[row[:-1]] for row in M], dtype=np.dtype(int))
+    A = np.array([row[:-1] for row in M], dtype=np.dtype(int))
     c = np.array([row[-1] for row in M], dtype=np.dtype(int))
     # Now, apply the change of variables as
     # Ny + d = A(Py + b) + c = (AP)y + (Ab + c),
