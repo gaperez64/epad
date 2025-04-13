@@ -1,3 +1,4 @@
+from systems.linineqs import LinIneqs
 from systems.lindivs import LinDivs
 
 
@@ -34,3 +35,16 @@ class TestLinDivs:
         assert g[0] == (11, 22, 33)
         assert f[1] == (1, 2, 3)
         assert g[1] == (4, 5, 6)
+
+    def test_disj_just_divs(self):
+        linqs = LinIneqs(tuple([(-1, -1, -1, 10)]),
+                         tuple([(1, 1, 0, -1)]))
+        lds = LinDivs(tuple([(5, 7, 0, 0)]),
+                      tuple([(0, 11, -3, 1)]),
+                      linqs.get_ineqs(),
+                      linqs.get_eqs())
+        disj = [d.get_divs() for d in lds.disj_just_divs()]
+        assert all([len(f) == 1 for (f, g) in disj])
+        disj = [(f[0], g[0]) for (f, g) in disj]
+        assert ((0, 5), (-3, -26)) in disj
+        assert ((0, 7), (-3, -15)) in disj

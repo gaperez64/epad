@@ -14,3 +14,10 @@ class TestLinEqs:
         assert len(periods) == 1
         assert bases[0] == tuple([0, 0, 0])
         assert periods[0] == tuple([2, 2, 1])
+
+        leqs = LinEqs(tuple([(1, 1, -1)]))
+        bases, periods = leqs.solutions()
+        assert len(bases) == 2
+        assert len(periods) == 0
+        assert (1, 0) in bases
+        assert (0, 1) in bases
