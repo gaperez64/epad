@@ -36,6 +36,14 @@ class TestLinDivs:
         assert f[1] == (1, 2, 3)
         assert g[1] == (4, 5, 6)
 
+    def test_primitive_terms(self):
+        lds = LinDivs(tuple([(20, 40, 60), (33, 27, 99)]),
+                      tuple([(22, 44, 66), (5, 7, 11)]))
+        pts = [t for t in lds.primitive_terms()]
+        assert len(pts) == 2
+        assert (1, 2, 3) in pts
+        assert (11, 9, 33) in pts
+
     def test_disj_just_divs(self):
         linqs = LinIneqs(tuple([(-1, -1, -1, 10)]),
                          tuple([(1, 1, 0, -1)]))

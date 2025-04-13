@@ -39,6 +39,11 @@ class LinDivs(LinIneqs):
         return LinDivs(tuple(newF), tuple(newG),
                        self.get_eqs(), self.get_ineqs())
 
+    def primitive_terms(self):
+        for f in self.F:
+            d = math.gcd(*f)
+            yield tuple([a // d for a in f])
+
     def disj_just_divs(self):
         bases, periods = LinIneqs.solutions(self)
         for b in bases:
