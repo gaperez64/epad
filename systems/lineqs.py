@@ -9,6 +9,9 @@ class LinEqs:
     def __init__(self, constrs: Mat):
         self.A = constrs
 
+    def get_eqs(self):
+        return self.A
+
     def __str__(self):
         eqs = [vec2str(a) + " = 0" for a in self.A]
         return "\n".join(eqs)

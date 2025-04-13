@@ -12,6 +12,9 @@ class LinIneqs(LinEqs):
         LinEqs.__init__(self, eqconstrs)
         self.B = ineqconstrs
 
+    def get_ineqs(self):
+        return self.B
+
     def __str__(self):
         ineqs = [vec2str(b) + " <= 0" for b in self.B]
         s = LinEqs.__str__(self)
@@ -31,7 +34,7 @@ class LinIneqs(LinEqs):
             eqB.append(tuple(xtras + list(b)))
         # and we extend the original equalities
         exA = []
-        for a in self.A:
+        for a in self.get_eqs():
             exA.append(tuple(([0] * xvars) + list(a)))
 
         # We can now make a call to get solutions of the linear system

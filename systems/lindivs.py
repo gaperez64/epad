@@ -1,3 +1,4 @@
+import math
 from systems.linineqs import LinIneqs
 from systems.matutils import vec2str
 
@@ -17,6 +18,9 @@ class LinDivs(LinIneqs):
         self.F = divisors
         self.G = dividends
 
+    def get_divs(self):
+        return self.F, self.G
+
     def __str__(self):
         divs = [vec2str(f) + " | " + vec2str(g)
                 for (f, g) in zip(self.F, self.G)]
@@ -24,3 +28,13 @@ class LinDivs(LinIneqs):
         if len(s) != 0:
             s += "\n"
         return s + "\n".join(divs)
+
+    def reduced(self):
+        newF = []
+        newG = []
+        for f, g in zip(self.F, self.G):
+            d = math.gcd(*f, *g)
+            newF.append(tuple([a // d for a in f]))
+            newG.append(tuple([b // d for b in g]))
+        return LinDivs(tuple(newF), tuple(newG),
+                       self.get_eqs(), self.get_ineqs())
