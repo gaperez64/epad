@@ -1,6 +1,6 @@
 import math
 from systems.linineqs import LinIneqs
-from systems.matutils import vec2str
+from systems.matutils import vec2str, affxvars
 
 type Mat = tuple[tuple[int, ...], ...]
 
@@ -38,3 +38,10 @@ class LinDivs(LinIneqs):
             newG.append(tuple([b // d for b in g]))
         return LinDivs(tuple(newF), tuple(newG),
                        self.get_eqs(), self.get_ineqs())
+
+    def disj_just_divs(self):
+        bases, periods = LinIneqs.solutions(self)
+        for b in bases:
+            F = affxvars(self.F, b, periods)
+            G = affxvars(self.G, b, periods)
+            yield LinDivs(F, G)
