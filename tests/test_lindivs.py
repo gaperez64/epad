@@ -44,14 +44,14 @@ class TestLinDivs:
         assert (1, 2, 3) in pts
         assert (11, 9, 33) in pts
 
-    def test_disj_just_divs(self):
+    def test_all_disj_just_divs(self):
         linqs = LinIneqs(tuple([(-1, -1, -1, 10)]),
                          tuple([(1, 1, 0, -1)]))
         lds = LinDivs(tuple([(5, 7, 0, 0)]),
                       tuple([(0, 11, -3, 1)]),
                       linqs.get_ineqs(),
                       linqs.get_eqs())
-        disj = [d.get_divs() for d in lds.disj_just_divs()]
+        disj = [d.get_divs() for d in lds.all_disj_just_divs()]
         assert all([len(f) == 1 for (f, g) in disj])
         disj = [(f[0], g[0]) for (f, g) in disj]
         assert ((0, 5), (-3, -26)) in disj

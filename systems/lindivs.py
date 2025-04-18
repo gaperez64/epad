@@ -1,4 +1,5 @@
 import math
+import itertools
 from systems.linineqs import LinIneqs
 from systems.matutils import vec2str, affxvars
 
@@ -17,6 +18,12 @@ class LinDivs(LinIneqs):
         assert all([len(f) == len(g) for f in divisors for g in dividends])
         self.F = divisors
         self.G = dividends
+
+    def all_ordered(self):
+        for ordtyp in itertools.permutations(range(len(self.F[0]))):
+            # TODO add linineqs for each subsequent pair of indices in ordtyp
+            # create new lindiv and yield it
+            pass
 
     def get_divs(self):
         return self.F, self.G
@@ -44,7 +51,7 @@ class LinDivs(LinIneqs):
             d = math.gcd(*f)
             yield tuple([a // d for a in f])
 
-    def disj_just_divs(self):
+    def all_disj_just_divs(self):
         bases, periods = LinIneqs.solutions(self)
         for b in bases:
             F = affxvars(self.F, b, periods)
