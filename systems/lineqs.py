@@ -1,5 +1,5 @@
 import z3
-from systems.matutils import vec2str
+from utils.matutils import vec2str
 
 type Mat = tuple[tuple[int, ...], ...]
 type Vecs = list[tuple[int, ...]]

@@ -1,4 +1,5 @@
 import numpy as np
+import flint
 
 type Vec = tuple[int, ...]
 type Mat = tuple[Vec, ...]
@@ -35,3 +36,12 @@ def affxvars(M: Mat, base: Vec, periods: Vecs) -> Mat:
     d = d.tolist()
     res = tuple([tuple(row + [d[i]]) for i, row in enumerate(N)])
     return res
+
+
+def column_style_hnf(M: Mat) -> tuple[Mat, Mat]:
+    A = flint.fmpz_mat(M)
+    At = A.transpose()
+    Ht, Tt = At.hnf(transform=True)
+    H = tuple([tuple(r) for r in Ht.transpose().tolist()])
+    T = tuple([tuple(r) for r in Tt.transpose().tolist()])
+    return (H, T)

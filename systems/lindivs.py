@@ -1,7 +1,7 @@
 import math
 import itertools
 from systems.linineqs import LinIneqs
-from systems.matutils import vec2str, affxvars
+from utils.matutils import vec2str, affxvars
 
 type Mat = tuple[tuple[int, ...], ...]
 
