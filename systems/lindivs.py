@@ -1,7 +1,7 @@
 import math
 import itertools
 from systems.linineqs import LinIneqs
-from utils.matutils import Mat, Vec, vec2str, affxvars
+from utils.matutils import Mat, Vec, vec2str, affxvars, basis_of_ker
 
 
 class LinDivs(LinIneqs):
@@ -56,5 +56,17 @@ class LinDivs(LinIneqs):
             G = affxvars(self.G, b, periods)
             yield LinDivs(F, G)
 
-    def basis_of_divmodule(self, f: Vec) -> Mat:
-        pass
+    def basis_of_divmodule(self, h: Vec) -> Mat:
+        v = [0] * len(self.F)
+        while True:
+            u = tuple(v)
+            for i, f in enumerate(self.F):
+                Mt = [[-1 * c for c in f], h]
+                for j, g in enumerate(self.G):
+                    Mt.append([u[j] * c for c in g])
+                # We actually want the transpose of Mt
+                M = tuple([tuple(col) for col in zip(*Mt)])
+                K = basis_of_ker(M)
+                v[i] = math.gcd(*K[0])
+            if u == tuple(v):
+                return u
