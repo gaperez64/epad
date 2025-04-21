@@ -45,3 +45,10 @@ def column_style_hnf(M: Mat) -> tuple[Mat, Mat]:
     H = tuple([tuple(r) for r in Ht.transpose().tolist()])
     T = tuple([tuple(r) for r in Tt.transpose().tolist()])
     return (H, T)
+
+
+def basis_of_ker(M: Mat) -> Mat:
+    A = flint.fmpz_mat(M)
+    X, nullity = A.nullspace()
+    B = tuple([tuple(r[:nullity]) for i, r in enumerate(X.tolist())])
+    return B

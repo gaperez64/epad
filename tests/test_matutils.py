@@ -1,4 +1,4 @@
-from utils.matutils import affxvars, column_style_hnf
+from utils.matutils import affxvars, column_style_hnf, basis_of_ker
 import flint
 
 
@@ -24,3 +24,19 @@ class TestMatutils:
         H, T = column_style_hnf(A)
         assert H == A
         assert flint.fmpz_mat(H) == flint.fmpz_mat(A) * flint.fmpz_mat(T)
+
+    def test_basis_of_ker(self):
+        Al = [tuple([1, 2, 3, 4, 5]),
+              tuple([6, 7, 8, 9, 10]),
+              tuple([11, 12, 13, 14, 15])]
+        A = tuple(Al)
+        B = basis_of_ker(A)
+        assert len(B) == 5
+        assert len(B[0]) == 3
+        exl = [tuple([5, 10, 15]),
+               tuple([-10, -15, -20]),
+               tuple([5, 0, 0]),
+               tuple([0, 5, 0]),
+               tuple([0, 0, 5])]
+        ex = tuple(exl)
+        assert B == ex
