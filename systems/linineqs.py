@@ -1,7 +1,5 @@
 from systems.lineqs import LinEqs
-from utils.matutils import vec2str
-
-type Mat = tuple[tuple[int, ...], ...]
+from utils.matutils import Mat, vec2str
 
 
 class LinIneqs(LinEqs):

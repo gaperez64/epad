@@ -1,9 +1,7 @@
 import math
 import itertools
 from systems.linineqs import LinIneqs
-from utils.matutils import vec2str, affxvars
-
-type Mat = tuple[tuple[int, ...], ...]
+from utils.matutils import Mat, Vec, vec2str, affxvars
 
 
 class LinDivs(LinIneqs):
@@ -57,3 +55,6 @@ class LinDivs(LinIneqs):
             F = affxvars(self.F, b, periods)
             G = affxvars(self.G, b, periods)
             yield LinDivs(F, G)
+
+    def basis_of_divmodule(self, f: Vec) -> Mat:
+        pass
