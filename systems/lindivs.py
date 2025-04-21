@@ -20,7 +20,7 @@ class LinDivs(LinIneqs):
     def all_ordered(self):
         for ordtyp in itertools.permutations(range(len(self.F[0]))):
             # TODO add linineqs for each subsequent pair of indices in ordtyp
-            # create new lindiv and yield it
+            # create new lindiv and yield it, together with the order
             pass
 
     def get_divs(self):
