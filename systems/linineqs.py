@@ -23,7 +23,8 @@ class LinIneqs(LinEqs):
     def solutions(self):
         # We first need to determine how many extra vars are needed
         xvars = len(self.B)
-        assert xvars >= 1
+        assert xvars >= 1, "The domain of the variables needs to be "\
+                           "explicit, at least x >= 0"
         # Now we turn the inequalities into equalities
         eqB = []
         for i, b in enumerate(self.B):

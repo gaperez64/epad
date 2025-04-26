@@ -17,10 +17,15 @@ class LinDivs(LinIneqs):
         self.F = divisors
         self.G = dividends
 
+    def is_left_pos(self):
+        return all([[all(c >= 0) for c in row] for row in self.F])
+
     def all_ordered(self):
         for ordtyp in itertools.permutations(range(len(self.F[0]))):
             # TODO add linineqs for each subsequent pair of indices in ordtyp
             # create new lindiv and yield it, together with the order
+            # (it could be implicit in a reordering of the variables
+            # within the divisibilities)
             pass
 
     def get_divs(self):
