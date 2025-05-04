@@ -35,7 +35,8 @@ class LinDivs(LinIneqs):
                 assert len(h) == len(f)
                 ineqs.append(h)
             ordered = LinDivs(self.F, self.G, self.get_eqs(), tuple(ineqs))
-            yield from ordered.all_disj_just_divs()
+            for res in ordered.all_disj_just_divs():
+                yield res.reduced()
 
     def all_ordered(self):
         for ordtyp in permutations(range(len(self.F[0]))):
