@@ -27,15 +27,20 @@ def affxvars(M: Mat, base: Vec, periods: Vecs) -> Mat:
     # Ny + d = A(Py + b) + c = (AP)y + (Ab + c),
     # where P is a matrix with periods as columns
     # and b is the single base
-    P = np.transpose(np.array(periods, dtype=np.dtype(int)))
     b = np.array(base, dtype=np.dtype(int))
-    N = A @ P
     d = A @ b + c
-    # Now put back into the original data-structure types
-    N = N.tolist()
-    d = d.tolist()
-    res = tuple([tuple(row + [d[i]]) for i, row in enumerate(N)])
-    return res
+    if len(periods) > 0:
+        P = np.transpose(np.array(periods, dtype=np.dtype(int)))
+        N = A @ P
+        # Now put back into the original data-structure types
+        N = N.tolist()
+        d = d.tolist()
+        res = tuple([tuple(row + [d[i]]) for i, row in enumerate(N)])
+        return res
+    else:  # things are much simpler without periods
+        d = d.tolist()
+        res = tuple([tuple([c]) for c in d])
+        return res
 
 
 def column_style_hnf(M: Mat) -> tuple[Mat, Mat]:

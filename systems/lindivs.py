@@ -1,5 +1,5 @@
 import math
-import itertools
+from itertools import chain, combinations, permutations
 from systems.linineqs import LinIneqs
 from utils.matutils import Mat, Vec, vec2str, affxvars, basis_of_ker
 
@@ -18,10 +18,27 @@ class LinDivs(LinIneqs):
         self.G = dividends
 
     def is_left_pos(self):
-        return all([[all(c >= 0) for c in row] for row in self.F])
+        return all([all([c >= 0 for c in row]) for row in self.F])
+
+    def all_disj_left_pos(self):
+        for nonneg in chain.from_iterable(combinations(self.F, n)
+                                          for n in range(len(self.F) + 1)):
+            ineqs = list(self.get_ineqs())
+            for f in self.F:
+                h = f
+                if f in nonneg:
+                    h = tuple([c * -1 for c in f])
+                else:
+                    h = list(f)
+                    h[-1] += 1
+                    h = tuple(h)
+                assert len(h) == len(f)
+                ineqs.append(h)
+            ordered = LinDivs(self.F, self.G, self.get_eqs(), tuple(ineqs))
+            yield from ordered.all_disj_just_divs()
 
     def all_ordered(self):
-        for ordtyp in itertools.permutations(range(len(self.F[0]))):
+        for ordtyp in permutations(range(len(self.F[0]))):
             # TODO add linineqs for each subsequent pair of indices in ordtyp
             # create new lindiv and yield it, together with the order
             # (it could be implicit in a reordering of the variables
@@ -44,7 +61,12 @@ class LinDivs(LinIneqs):
         newG = []
         for f, g in zip(self.F, self.G):
             d = math.gcd(*f, *g)
-            newF.append(tuple([a // d for a in f]))
+            # we also factor out a -1 on the left if possible
+            if all([c < 0 for c in f]):
+                s = -1
+            else:
+                s = 1
+            newF.append(tuple([s * a // d for a in f]))
             newG.append(tuple([b // d for b in g]))
         return LinDivs(tuple(newF), tuple(newG),
                        self.get_eqs(), self.get_ineqs())
