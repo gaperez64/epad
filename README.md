@@ -1,7 +1,14 @@
 # Tools for the existential fragment of Presburger arithmetic with divisibility
 The first goal of this repository is to have a library to manipulate systems
 of divisibility constraints over linear (diophantine) polynomials conjoined
-with equations and inequalities. 
+with equations and inequalities.
+1. Normalization of such formulas (based on ["On the Complexity of Linear
+   Arithmetic with Divisibility", by Joël Ouaknine, Antonia Lechner and Ben
+   Worrell.](https://www.cs.ox.ac.uk/people/james.worrell/LICS-main.pdf))
+2. Solvers for normalized formulas (based on the same work mentioned above,
+   and an alternative one based on ["Integer Programming with GCD
+   Constraints", by Rémy Défossez, Christoph Haase, Alessio Mansutti, and Guillermo
+   A. Pérez.](https://epubs.siam.org/doi/10.1137/1.9781611977912.128))
 
 ## (Wrong) design choices
 - We are only encoding systems, so no disjunctions.
