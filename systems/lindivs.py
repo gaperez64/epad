@@ -72,7 +72,27 @@ class LinDivs(LinIneqs):
         return LinDivs(tuple(newF), tuple(newG),
                        self.get_eqs(), self.get_ineqs())
 
-    def primitive_terms(self):
+    def all_non_increasing(self, order: Vec):
+        not_increasing = []
+        for pt in self.primitive_terms():
+            assert all([c != 0 for c in pt])
+            # compute the leading variable
+            lvar = -1
+            larger = []
+            for idx in reversed(order):
+                if pt[idx] != 0:
+                    lvar = idx
+                else:
+                    larger.append(idx)
+            assert lvar >= 0
+            # get the basis of the module
+            basis = self.basis_of_divmodule(pt)
+            if any([c != 0 for row in larger for c in basis[row]]):
+                not_increasing.append(pt)
+                # TODO: return a column witnessing non-increasingness too
+        return not_increasing
+
+    def primitive_terms(self) -> Vec:
         for f in self.F:
             d = math.gcd(*f)
             yield tuple([a // d for a in f])
