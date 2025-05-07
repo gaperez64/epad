@@ -33,13 +33,16 @@ Lipshitz' transformation into increasing normal form if we have:
   constraints, towards obtaining left-hand sides with all positive
   coefficients, and adding them as inequalities to then remove them via the
   method described above
-- [ ] A way of obtaining a finite representation of the module of the
-  primitive polynomials of the left-hand sides
+- [X] A way of obtaining a finite representation of the module of the
+  primitive polynomials of the left-hand sides. In short, (see Section C.1
+  from the extended version of the cited SODA paper) we get a finite spanning
+  set of the module.
 - [ ] A way of checking whether a given system is increasing for a given
-  (semantic) order over the variables, based on the representation above.
-  (NOTE: This should be as easy as checking whether all elements of the
-  spanning set of the module have 0 in the entries larger than the leading
-  variable of the LHS?)
+  (semantic) order over the variables, based on the representation above.  For
+  this, we can check whether all elements of the spanning set are integer
+  multiples of the given primitive polynomial (so compute the factor for one
+  component, and check it's the same for all others, per element in the
+  spanning set).
 - [ ] ...
 
 ## Dependencies
