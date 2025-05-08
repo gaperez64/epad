@@ -1,7 +1,9 @@
 import math
 from itertools import chain, combinations, permutations
 from systems.linineqs import LinIneqs
-from utils.matutils import Mat, Vec, vec2str, affxvars, basis_of_ker
+from utils.matutils import (Mat, Vec,
+                            vec2str, affxvars,
+                            basis_of_ker, transpose)
 
 
 class LinDivs(LinIneqs):
@@ -72,10 +74,14 @@ class LinDivs(LinIneqs):
         return LinDivs(tuple(newF), tuple(newG),
                        self.get_eqs(), self.get_ineqs())
 
+    # The order is assumed to be increasing
     def all_non_increasing(self, order: Vec):
+        assert len(self.F) > 0
+        assert len(order) + 1 == len(self.F[0])
+        print(f"order = {order}")
         not_increasing = []
         for pt in self.primitive_terms():
-            assert all([c != 0 for c in pt])
+            assert all([c >= 0 for c in pt])
             # compute the leading variable
             lvar = -1
             larger = []
@@ -85,11 +91,26 @@ class LinDivs(LinIneqs):
                 else:
                     larger.append(idx)
             assert lvar >= 0
-            # get the basis of the module
+            # get the vectors in the basis of the module
+            # that have no nonzero values in components larger
+            # than the leading variable of the primitive term
+            print(f"Primitive term = {pt}")
+            print(f"Leading variable is x{lvar}")
+            print(f"Larger = {larger}")
             basis = self.basis_of_divmodule(pt)
-            if any([c != 0 for row in larger for c in basis[row]]):
-                not_increasing.append(pt)
-                # TODO: return a column witnessing non-increasingness too
+            for vec in transpose(basis):
+                print(f"Is {vec} independent?")
+                # Vectors with nonzero coefficients for variables larger
+                # than the leading one for the primitive term can be
+                # excluded
+                if any([vec[i] != 0 for i in larger]):
+                    print("not in intersection...")
+                    continue
+                # Otherwise we check for linear dependence
+                fac = pt[lvar] // vec[lvar]
+                if any([pt[i] * fac != vec[i]
+                       for i in range(len(pt))]):
+                    not_increasing.append(vec)
         return not_increasing
 
     def primitive_terms(self) -> Vec:
@@ -113,8 +134,15 @@ class LinDivs(LinIneqs):
                 for j, g in enumerate(self.G):
                     Mt.append([u[j] * c for c in g])
                 # We actually want the transpose of Mt
-                M = tuple([tuple(col) for col in zip(*Mt)])
+                M = transpose(Mt)
                 K = basis_of_ker(M)
                 v[i] = math.gcd(*K[0])
             if u == tuple(v):
-                return u
+                break
+        # Now we construct a matrix whose colums are h and all elements of g
+        # multiplied by their coefficient in v
+        H = [h]
+        for c, g in zip(v, self.G):
+            H.append(tuple([c * a for a in g]))
+        H = tuple(H)
+        return transpose(H)

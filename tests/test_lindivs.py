@@ -77,3 +77,17 @@ class TestLinDivs:
                       linqs.get_eqs())
         disj = [d for d in lds.all_disj_left_pos()]
         assert all([d.is_left_pos() for d in disj])
+
+    def test_all_non_increasing(self):
+        # Examples from the introduction of our SODA paper
+        # x + 1 | y - 2 is increasing w.r.t. x < y
+        lds = LinDivs(tuple([(1, 0, 1)]),
+                      tuple([(0, 1, -2)]))
+        order = tuple([0, 1])
+        assert 0 == len(lds.all_non_increasing(order))
+
+        # x + 1 | y - 2 && x + 1 | x + y
+        # is NOT increasing w.r.t. x < y
+        lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
+                      tuple([(0, 1, -2), (1, 1, 0)]))
+        assert 0 < len(lds.all_non_increasing(order))

@@ -43,6 +43,10 @@ def affxvars(M: Mat, base: Vec, periods: Vecs) -> Mat:
         return res
 
 
+def transpose(M: Mat) -> Mat:
+    return tuple([tuple(col) for col in zip(*M)])
+
+
 def column_style_hnf(M: Mat) -> tuple[Mat, Mat]:
     A = flint.fmpz_mat(M)
     At = A.transpose()
