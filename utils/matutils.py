@@ -19,6 +19,14 @@ def vec2str(v: Vec) -> str:
     return s
 
 
+def matmul(M: Mat, N: Mat) -> Mat:
+    assert len(M[0]) == len(N)
+    M = np.array(M, dtype=np.dtype(int))
+    M = np.array(N, dtype=np.dtype(int))
+    res = M @ N
+    return tuple([tuple(row) for row in res.tolist()])
+
+
 def affxvars(M: Mat, base: Vec, periods: Vecs) -> Mat:
     # Unpack M into numpy Ax + c
     A = np.array([row[:-1] for row in M], dtype=np.dtype(int))

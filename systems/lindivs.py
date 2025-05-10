@@ -1,8 +1,8 @@
 import math
 from itertools import chain, combinations, permutations
 from systems.linineqs import LinIneqs
-from utils.matutils import (Mat, Vec,
-                            vec2str, affxvars,
+from utils.matutils import (Mat, Vec, column_style_hnf,
+                            vec2str, affxvars, matmul,
                             basis_of_ker, transpose)
 
 
@@ -84,33 +84,48 @@ class LinDivs(LinIneqs):
             assert all([c >= 0 for c in pt])
             # compute the leading variable
             lvar = -1
-            larger = []
-            for idx in reversed(order):
+            lvaridx = -1
+            for i, idx in enumerate(reversed(order)):
                 if pt[idx] != 0:
                     lvar = idx
-                else:
-                    larger.append(idx)
+                    lvaridx = len(order) - 1 - i
             assert lvar >= 0
-            # get the vectors in the basis of the module
-            # that have no nonzero values in components larger
-            # than the leading variable of the primitive term
+            assert 0 <= lvaridx and lvaridx < len(order)
+
             print(f"Primitive term = {pt}")
             print(f"Leading variable is x{lvar}")
+            larger = order[lvaridx + 1:]
             print(f"Larger = {larger}")
-            basis = self.basis_of_divmodule(pt)
-            for vec in transpose(basis):
-                print(f"Is {vec} independent?")
-                # Vectors with nonzero coefficients for variables larger
-                # than the leading one for the primitive term can be
-                # excluded
-                if any([vec[i] != 0 for i in larger]):
-                    print("not in intersection...")
-                    continue
-                # Otherwise we check for linear dependence
-                fac = pt[lvar] // vec[lvar]
-                if any([pt[i] * fac != vec[i]
-                       for i in range(len(pt))]):
-                    not_increasing.append(vec)
+
+            # We now need a matrix representing the module spanned by
+            # linear polynomials on variables smaller than or equal to the
+            # leading variable. We then intersect the ones we have, and
+            # compare hermite normal forms of that one and the one for
+            # just pt (to check equality).
+
+            # Intersection
+            basis_of_mod = self.basis_of_divmodule(pt)
+            extended = list(basis_of_mod)
+            for n in len(order):
+                rest = len(order) - 1 - n
+                extended[n] += tuple(([0] * n) + [1] + ([0] * rest))
+            extended = tuple(extended)
+            ker_of_extended = basis_of_ker(extended)
+            res = matmul(basis_of_mod,
+                         transpose(transpose(ker_of_extended)[:len(order)]))
+            # HNF of intersection
+            hnf_of_int = column_style_hnf(res)
+            # HNF of just pt
+            hnf_of_pt = column_style_hnf(tuple([tuple([c]) for c in pt]))
+            print(f"HNF of int = {hnf_of_int}")
+            print(f"HNF of primitive part = {hnf_of_pt}")
+            hnf_of_int = transpose(hnf_of_int)
+            hnf_of_pt = transpose(hnf_of_int)
+            for ridx in len(hnf_of_int):
+                if hnf_of_int[ridx] != hnf_of_pt[ridx]:
+                    not_increasing.append(tuple([pt, hnf_of_int[ridx]]))
+                    break
+
         return not_increasing
 
     def primitive_terms(self) -> Vec:
