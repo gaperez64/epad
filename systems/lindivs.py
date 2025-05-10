@@ -106,9 +106,10 @@ class LinDivs(LinIneqs):
             # Intersection
             basis_of_mod = self.basis_of_divmodule(pt)
             extended = list(basis_of_mod)
-            for n in len(order):
+            for n in range(len(order)):
                 rest = len(order) - 1 - n
                 extended[n] += tuple(([0] * n) + [1] + ([0] * rest))
+                assert len(extended) == 2 * len(order)
             extended = tuple(extended)
             ker_of_extended = basis_of_ker(extended)
             res = matmul(basis_of_mod,
@@ -121,7 +122,7 @@ class LinDivs(LinIneqs):
             print(f"HNF of primitive part = {hnf_of_pt}")
             hnf_of_int = transpose(hnf_of_int)
             hnf_of_pt = transpose(hnf_of_int)
-            for ridx in len(hnf_of_int):
+            for ridx in range(len(hnf_of_int)):
                 if hnf_of_int[ridx] != hnf_of_pt[ridx]:
                     not_increasing.append(tuple([pt, hnf_of_int[ridx]]))
                     break
