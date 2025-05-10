@@ -109,7 +109,6 @@ class LinDivs(LinIneqs):
             for n in range(len(order)):
                 rest = len(order) - 1 - n
                 extended[n] += tuple(([0] * n) + [1] + ([0] * rest))
-                assert len(extended) == 2 * len(order)
             extended = tuple(extended)
             ker_of_extended = basis_of_ker(extended)
             res = matmul(basis_of_mod,
