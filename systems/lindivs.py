@@ -94,7 +94,7 @@ class LinDivs(LinIneqs):
 
             print(f"Primitive term = {pt}")
             print(f"Leading variable is x{lvar}")
-            larger = order[lvaridx + 1:]
+            larger = order[lvaridx+1:]
             print(f"Larger = {larger}")
 
             # We now need a matrix representing the module spanned by
@@ -103,14 +103,25 @@ class LinDivs(LinIneqs):
             # compare hermite normal forms of that one and the one for
             # just pt (to check equality).
 
-            # Intersection
+            # Matrix with row bases for all smaller variables
+            extended = [tuple(([0] * len(order)) + [1])]  # and the constant(s)
+            for idx in order[:lvaridx+1]:
+                rest = len(order) - idx  # implicit + 1 due to constants
+                extended.append(tuple(([0] * (idx - 1)) + [1] + ([0] * rest)))
+            print("Spanning set of smaller variables")
+            print(extended)
+            # Use this to extend the column-based basis of the module
             basis_of_mod = self.basis_of_divmodule(pt)
-            extended = list(basis_of_mod)
-            for n in range(len(order)):
-                rest = len(order) - 1 - n
-                extended[n] += tuple(([0] * n) + [1] + ([0] * rest))
-            extended = tuple(extended)
+            print("Basis of mod")
+            print(basis_of_mod)
+            extended = list(transpose(basis_of_mod)) + extended
+            extended = transpose(tuple(extended))
+            # Intersection
+            print("Extended")
+            print(extended)
             ker_of_extended = basis_of_ker(extended)
+            print("Ker of extended")
+            print(ker_of_extended)
             res = matmul(basis_of_mod,
                          transpose(transpose(ker_of_extended)[:len(order)]))
             # HNF of intersection
@@ -129,9 +140,13 @@ class LinDivs(LinIneqs):
         return not_increasing
 
     def primitive_terms(self) -> Vec:
+        done = set()
         for f in self.F:
             d = math.gcd(*f)
-            yield tuple([a // d for a in f])
+            res = tuple([a // d for a in f])
+            if res not in done:
+                yield res
+                done.add(res)
 
     def all_disj_just_divs(self):
         bases, periods = LinIneqs.solutions(self)
