@@ -122,8 +122,10 @@ class LinDivs(LinIneqs):
             ker_of_extended = basis_of_ker(extended)
             print("Ker of extended")
             print(ker_of_extended)
-            res = matmul(basis_of_mod,
-                         transpose(transpose(ker_of_extended)[:len(order)]))
+            ker_of_extended = ker_of_extended[:len(basis_of_mod[0])]
+            print("Ker of extended, after trimming")
+            print(ker_of_extended)
+            res = matmul(basis_of_mod, ker_of_extended)
             # HNF of intersection
             hnf_of_int = column_style_hnf(res)
             # HNF of just pt
