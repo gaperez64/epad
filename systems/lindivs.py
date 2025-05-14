@@ -41,7 +41,7 @@ class LinDivs(LinIneqs):
                 yield res.reduced()
 
     def all_ordered(self):
-        for ordtyp in permutations(range(len(self.F[0]))):
+        for ordtyp in permutations(range(len(self.F[0]) - 1)):  # skip consts
             # TODO add linineqs for each subsequent pair of indices in ordtyp
             # create new lindiv and yield it, together with the order
             # (it could be implicit in a reordering of the variables
@@ -78,7 +78,6 @@ class LinDivs(LinIneqs):
     def all_non_increasing(self, order: Vec):
         assert len(self.F) > 0
         assert len(order) + 1 == len(self.F[0])
-        print(f"order = {order}")
         not_increasing = []
         for pt in self.primitive_terms():
             assert all([c >= 0 for c in pt])
@@ -92,12 +91,7 @@ class LinDivs(LinIneqs):
             assert lvar >= 0
             assert 0 <= lvaridx and lvaridx < len(order)
 
-            print(f"Primitive term = {pt}")
-            print(f"Leading variable is x{lvar}")
-            larger = order[lvaridx+1:]
-            print(f"Larger = {larger}")
-
-            # We now need a matrix representing the module spanned by
+            # NOTE: We now need a matrix representing the module spanned by
             # linear polynomials on variables smaller than or equal to the
             # leading variable. We then intersect the ones we have, and
             # compare hermite normal forms of that one and the one for
@@ -108,32 +102,20 @@ class LinDivs(LinIneqs):
             for idx in order[:lvaridx+1]:
                 rest = len(order) - idx  # implicit + 1 due to constants
                 extended.append(tuple(([0] * (idx - 1)) + [1] + ([0] * rest)))
-            print("Spanning set of smaller variables")
-            print(extended)
             # Use this to extend the column-based basis of the module
             basis_of_mod = self.basis_of_divmodule(pt)
-            print("Basis of mod")
-            print(basis_of_mod)
             extended = list(transpose(basis_of_mod)) + extended
             extended = transpose(tuple(extended))
             # Intersection
-            print("Extended")
-            print(extended)
             ker_of_extended = basis_of_ker(extended)
-            print("Ker of extended")
-            print(ker_of_extended)
             ker_of_extended = ker_of_extended[:len(basis_of_mod[0])]
-            print("Ker of extended, after trimming")
-            print(ker_of_extended)
             res = matmul(basis_of_mod, ker_of_extended)
             # HNF of intersection
-            hnf_of_int = column_style_hnf(res)
+            hnf_of_int, _ = column_style_hnf(res)
             # HNF of just pt
-            hnf_of_pt = column_style_hnf(tuple([tuple([c]) for c in pt]))
-            print(f"HNF of int = {hnf_of_int}")
-            print(f"HNF of primitive part = {hnf_of_pt}")
+            hnf_of_pt, _ = column_style_hnf(tuple([tuple([c]) for c in pt]))
             hnf_of_int = transpose(hnf_of_int)
-            hnf_of_pt = transpose(hnf_of_int)
+            hnf_of_pt = transpose(hnf_of_pt)
             for ridx in range(len(hnf_of_int)):
                 if hnf_of_int[ridx] != hnf_of_pt[ridx]:
                     not_increasing.append(tuple([pt, hnf_of_int[ridx]]))

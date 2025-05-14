@@ -22,7 +22,7 @@ def vec2str(v: Vec) -> str:
 def matmul(M: Mat, N: Mat) -> Mat:
     assert len(M[0]) == len(N)
     M = np.array(M, dtype=np.dtype(int))
-    M = np.array(N, dtype=np.dtype(int))
+    N = np.array(N, dtype=np.dtype(int))
     res = M @ N
     return tuple([tuple(row) for row in res.tolist()])
 

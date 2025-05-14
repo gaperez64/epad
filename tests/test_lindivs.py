@@ -90,4 +90,6 @@ class TestLinDivs:
         # is NOT increasing w.r.t. x < y
         lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
                       tuple([(0, 1, -2), (1, 1, 0)]))
-        assert 0 < len(lds.all_non_increasing(order))
+        neqs = lds.all_non_increasing(order)
+        print(neqs)
+        assert 0 < len(neqs)
