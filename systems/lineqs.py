@@ -11,7 +11,7 @@ class LinEqs:
 
     def get_dim(self):
         assert len(self.A) > 0
-        return len(self.A[0])
+        return len(self.A[0]) - 1
 
     def __str__(self):
         eqs = [vec2str(a) + " = 0" for a in self.A]
@@ -26,25 +26,27 @@ class LinEqs:
         s.add(z3.And([indets[i] >= 0 for i in range(nvars)]))
 
         # First we get the periods
-        s.push()
-        # make sure we get nonzero solutions
-        s.add(z3.Or([indets[i] >= 1 for i in range(nvars)]))
         periods = []
         needs_bases = False
-        for a in self.A:
-            linpoly = 0
-            for i, c in enumerate(a):
-                if i == len(a) - 1:
-                    needs_bases = needs_bases or (c != 0)
-                    s.add(linpoly == 0)
-                else:
-                    linpoly += str(c) * indets[i]
-        while s.check() != z3.unsat:
-            m = s.model()
-            vec = tuple([int(m[indets[i]].as_string()) for i in range(nvars)])
-            periods.append(vec)
-            s.add(z3.Or([indets[i] < vec[i] for i in range(nvars)]))
-        s.pop()
+        if nvars > 1:
+            s.push()
+            # make sure we get nonzero solutions
+            s.add(z3.Or([indets[i] >= 1 for i in range(nvars)]))
+            for a in self.A:
+                linpoly = 0
+                for i, c in enumerate(a):
+                    if i == len(a) - 1:
+                        needs_bases = needs_bases or (c != 0)
+                        s.add(linpoly == 0)
+                    else:
+                        linpoly += str(c) * indets[i]
+            while s.check() != z3.unsat:
+                m = s.model()
+                vec = tuple([int(m[indets[i]].as_string())
+                             for i in range(nvars)])
+                periods.append(vec)
+                s.add(z3.Or([indets[i] < vec[i] for i in range(nvars)]))
+            s.pop()
 
         # FIXME: In most applications we need the periods to be less than the
         # number of variables. This can be enforced, but for now we just check

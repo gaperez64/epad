@@ -19,6 +19,10 @@ class LinDivs(LinIneqs):
         self.F = divisors
         self.G = dividends
 
+    def get_dim(self):
+        assert len(self.F) > 0
+        return len(self.F[0]) - 1
+
     def is_left_pos(self):
         return all([all([c >= 0 for c in row]) for row in self.F])
 
@@ -41,13 +45,21 @@ class LinDivs(LinIneqs):
             for res in ordered.all_disj_just_divs():
                 yield res.reduced()
 
-    def all_ordered(self):
+    def all_disj_from_noninc(self, noninc):
+        for f, g in noninc:
+            S = sum([abs(c) for c in g])
+            for c in range(-1 * S, S + 1):
+                cf_min_g = tuple([c * f[i] - g[i]
+                                  for i in range(len(f))])
+                assert len(cf_min_g) == len(f)
+                lds = LinDivs(self.F, self.G, self.get_ineqs(),
+                              self.get_eqs() + (cf_min_g,))
+                for res in lds.all_disj_just_divs():
+                    yield res.reduced()
+
+    def all_orders(self):
         for ordtyp in permutations(range(len(self.F[0]) - 1)):  # skip consts
-            # TODO add linineqs for each subsequent pair of indices in ordtyp
-            # create new lindiv and yield it, together with the order
-            # (it could be implicit in a reordering of the variables
-            # within the divisibilities)
-            pass
+            yield ordtyp
 
     def get_divs(self):
         return self.F, self.G
