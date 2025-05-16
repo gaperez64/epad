@@ -10,10 +10,10 @@ class LinDivs(LinIneqs):
     def __init__(self,
                  divisors: Mat,
                  dividends: Mat,
-                 eqconstrs: Mat = tuple(),
-                 ineqconstrs: Mat = tuple()):
+                 ineqconstrs: Mat = tuple(),
+                 eqconstrs: Mat = tuple()):
         assert all([len(f) == len(a) for f in divisors for a in eqconstrs])
-        LinIneqs.__init__(self, eqconstrs, ineqconstrs)
+        LinIneqs.__init__(self, ineqconstrs, eqconstrs)
         assert len(divisors) == len(dividends)
         assert all([len(f) == len(g) for f in divisors for g in dividends])
         self.F = divisors
@@ -23,10 +23,11 @@ class LinDivs(LinIneqs):
         return all([all([c >= 0 for c in row]) for row in self.F])
 
     def all_disj_left_pos(self):
-        for nonneg in chain.from_iterable(combinations(self.F, n)
-                                          for n in range(len(self.F) + 1)):
+        fset = set(self.F)
+        for nonneg in chain.from_iterable(combinations(fset, n)
+                                          for n in range(len(fset) + 1)):
             ineqs = list(self.get_ineqs())
-            for f in self.F:
+            for f in fset:
                 h = f
                 if f in nonneg:
                     h = tuple([c * -1 for c in f])
@@ -36,7 +37,7 @@ class LinDivs(LinIneqs):
                     h = tuple(h)
                 assert len(h) == len(f)
                 ineqs.append(h)
-            ordered = LinDivs(self.F, self.G, self.get_eqs(), tuple(ineqs))
+            ordered = LinDivs(self.F, self.G, tuple(ineqs), self.get_eqs())
             for res in ordered.all_disj_just_divs():
                 yield res.reduced()
 
@@ -55,7 +56,7 @@ class LinDivs(LinIneqs):
         divs = [vec2str(f) + " | " + vec2str(g)
                 for (f, g) in zip(self.F, self.G)]
         s = LinIneqs.__str__(self)
-        if len(s) != 0:
+        if len(s) != 0 and len(divs) != 0:
             s += "\n"
         return s + "\n".join(divs)
 

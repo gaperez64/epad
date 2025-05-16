@@ -9,6 +9,10 @@ class LinEqs:
     def get_eqs(self):
         return self.A
 
+    def get_dim(self):
+        assert len(self.A) > 0
+        return len(self.A[0])
+
     def __str__(self):
         eqs = [vec2str(a) + " = 0" for a in self.A]
         return "\n".join(eqs)

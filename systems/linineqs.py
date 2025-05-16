@@ -14,17 +14,15 @@ class LinIneqs(LinEqs):
         return self.B
 
     def __str__(self):
-        ineqs = [vec2str(b) + " <= 0" for b in self.B]
         s = LinEqs.__str__(self)
-        if len(s) != 0:
+        ineqs = [vec2str(b) + " <= 0" for b in self.B]
+        if len(s) != 0 and len(ineqs) != 0:
             s += "\n"
         return s + "\n".join(ineqs)
 
     def solutions(self):
         # We first need to determine how many extra vars are needed
         xvars = len(self.B)
-        assert xvars >= 1, "The domain of the variables needs to be "\
-                           "explicit, at least x >= 0"
         # Now we turn the inequalities into equalities
         eqB = []
         for i, b in enumerate(self.B):
@@ -46,6 +44,6 @@ class LinIneqs(LinEqs):
         # FIXME: In most applications we need the periods to be less than the
         # number of variables. This can be enforced, but for now we just check
         # that it holds
-        assert len(periods) < len(self.B[0])
+        assert len(periods) < exsystem.get_dim()
 
         return bases, periods

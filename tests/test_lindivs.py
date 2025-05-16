@@ -78,6 +78,18 @@ class TestLinDivs:
         disj = [d for d in lds.all_disj_left_pos()]
         assert all([d.is_left_pos() for d in disj])
 
+        # We use this example a few times in the sequel,
+        # it comes from our SODA paper
+        # x + 1 | y - 2 && x + 1 | x + y
+        # is NOT increasing w.r.t. x < y
+        order = tuple([0, 1])
+        lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
+                      tuple([(0, 1, -2), (1, 1, 0)]))
+        left_pos = list(lds.all_disj_left_pos())
+        assert len(left_pos) == 1
+        neqs = left_pos[0].all_non_increasing(order)
+        assert ((0, 1, 1), (1, 0, 0)) in neqs
+
     def test_all_non_increasing(self):
         # Examples from the introduction of our SODA paper
         # x + 1 | y - 2 is increasing w.r.t. x < y
