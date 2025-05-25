@@ -147,10 +147,43 @@ class LinDivs(LinIneqs):
 
     def all_disj_just_divs(self):
         bases, periods = LinIneqs.solutions(self)
+
+        current_dim = 0
+        if self.F: # If current system's F (divisors) is not empty
+            # self.get_dim() asserts len(self.F) > 0, which is true if self.F is not empty
+            current_dim = self.get_dim()
+        # If self.F is empty, current_dim remains 0, implying a 0-variable system
+        # in terms of its divisibility constraints.
+
+        num_new_vars = 0
+        if periods: # If periods list is not empty
+            # len(periods) is the number of period vectors,
+            # which corresponds to the number of new free variables for the transformed system.
+            num_new_vars = len(periods)
+        # If periods is empty, num_new_vars remains 0, implying the transformed system will be 0-variable.
+
         for b in bases:
-            F = affxvars(self.F, b, periods)
-            G = affxvars(self.G, b, periods)
-            yield LinDivs(F, G)
+            # Proceed to yield a new system if:
+            # 1. The number of variables in the new system (num_new_vars) is strictly less than
+            #    the number of variables in the current system (current_dim).
+            # OR
+            # 2. The current system is already 0-dimensional (current_dim == 0) AND 
+            #    the new system will also be 0-dimensional (num_new_vars == 0).
+            # This ensures progress towards termination or handles already terminal states.
+            if num_new_vars < current_dim or (current_dim == 0 and num_new_vars == 0):
+                F_new = affxvars(self.F, b, periods)
+                G_new = affxvars(self.G, b, periods)
+                
+                # The new LinDivs system is defined by the transformed F_new and G_new.
+                # Equalities and inequalities from 'self' were already incorporated by 
+                # LinIneqs.solutions() to compute 'bases' and 'periods'.
+                # The constructor LinDivs(divisors, dividends, ineqconstrs=tuple(), eqconstrs=tuple())
+                # is used when no *additional* inequalities/equalities are being passed for the new system.
+                new_system = LinDivs(F_new, G_new) 
+                yield new_system.reduced()
+            # Else (if num_new_vars >= current_dim and current_dim > 0):
+            # This path does not strictly reduce the number of variables.
+            # Skipping this system is crucial for ensuring the algorithm terminates.
 
     def basis_of_divmodule(self, h: Vec) -> Mat:
         v = [0] * len(self.F)

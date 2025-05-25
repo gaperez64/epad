@@ -1,9 +1,9 @@
 import numpy as np
-import flint
+from typing import List, Tuple
 
-type Vec = tuple[int, ...]
-type Mat = tuple[Vec, ...]
-type Vecs = list[Vec]
+Vec = Tuple[int, ...]
+Mat = Tuple[Vec, ...]
+Vecs = List[Vec]
 
 
 def vec2str(v: Vec) -> str:
