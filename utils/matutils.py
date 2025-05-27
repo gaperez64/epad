@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import flint
 
 type Vec = tuple[int, ...]
@@ -67,6 +68,14 @@ def column_style_hnf(M: Mat) -> tuple[Mat, Mat]:
 def basis_of_ker(M: Mat) -> Mat:
     A = flint.fmpz_mat(M)
     X, nullity = A.nullspace()
-    # FIXME: X and B are not "minimal"
     B = tuple([tuple(r[:nullity]) for i, r in enumerate(X.tolist())])
+    Bt = transpose(B)
+    minB = []
+    for row in Bt:
+        d = math.gcd(*row)
+        if d == 0:
+            minB.append(row)
+        else:
+            minB.append(tuple([(c / math.gcd(*row)) for c in row]))
+    B = transpose(tuple(minB))
     return B
