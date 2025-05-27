@@ -154,15 +154,21 @@ class LinDivs(LinIneqs):
 
     def basis_of_divmodule(self, h: Vec) -> Mat:
         v = [0] * len(self.F)
+        print(f"h = {h}")
+        print(str(self))
         while True:
             u = tuple(v)
+            print(f"u = {u}")
             for i, f in enumerate(self.F):
                 Mt = [[-1 * c for c in f], h]
                 for j, g in enumerate(self.G):
                     Mt.append([u[j] * c for c in g])
+                print(f"Mt = {Mt}")
                 # We actually want the transpose of Mt
                 M = transpose(Mt)
+                print(f"M = {M}")
                 K = basis_of_ker(M)
+                print(f"K = {K}")
                 v[i] = math.gcd(*K[0])
             if u == tuple(v):
                 break
