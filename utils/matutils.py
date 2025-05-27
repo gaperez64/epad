@@ -69,6 +69,8 @@ def basis_of_ker(M: Mat) -> Mat:
     A = flint.fmpz_mat(M)
     X, nullity = A.nullspace()
     B = tuple([tuple(r[:nullity]) for i, r in enumerate(X.tolist())])
+    # NOTE: the basis is not necessarily minimal, i.e. some columns may have
+    # nontrivial GCD! so we have to do an extra step to output a reduced basis
     Bt = transpose(B)
     minB = []
     for row in Bt:
