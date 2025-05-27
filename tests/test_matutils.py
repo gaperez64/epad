@@ -33,10 +33,10 @@ class TestMatutils:
         B = basis_of_ker(A)
         assert len(B) == 5
         assert len(B[0]) == 3
-        exl = [tuple([5, 10, 15]),
-               tuple([-10, -15, -20]),
-               tuple([5, 0, 0]),
-               tuple([0, 5, 0]),
-               tuple([0, 0, 5])]
+        exl = [tuple([1, 2, 3]),
+               tuple([-2, -3, -4]),
+               tuple([1, 0, 0]),
+               tuple([0, 1, 0]),
+               tuple([0, 0, 1])]
         ex = tuple(exl)
         assert B == ex
