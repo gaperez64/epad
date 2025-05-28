@@ -45,12 +45,11 @@ Lipshitz' transformation into increasing normal form if we have:
   (For an algorithm to compute the intersection of modules, see Chapter 2 from
   H. Cohen's __A Course in Computational Algebraic Number Theory__. Flint
   implements HNF algorithms based on LLL.)
-- [ ] An algorithm to deal with a witness of nonincreasingness to split
+- [X] An algorithm to deal with a witness of nonincreasingness to split
   (disjuntively) into subformulas with less variables (**Key for termination:
   each subformulas has to have strictly less variables**)
-- [ ] A recursive-style algorithm to keep finding nonincreasing subformulas to
+- [X] A recursive-style algorithm to keep finding nonincreasing subformulas to
   treat with the procedure above.
-- [ ] ...
 
 ## Dependencies
 For now, Z3 and flint
