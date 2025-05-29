@@ -22,7 +22,7 @@ with equations and inequalities.
 - We don't encode Ax = b but rather Ax - b = 0 and the last "coefficient" is
   the constant in the polynomial. Similar weirdness applies to inequalities.
 
-## WIP: Lipshitz' normalization
+## Lipshitz' normalization
 Given a system of divisibilities and linear constraints, we can implement
 Lipshitz' transformation into increasing normal form if we have:
 - [X] A way of obtaining a (hybrid) semilinear representation of the solutions
@@ -50,6 +50,9 @@ Lipshitz' transformation into increasing normal form if we have:
   each subformulas has to have strictly less variables**)
 - [X] A recursive-style algorithm to keep finding nonincreasing subformulas to
   treat with the procedure above.
+
+## WIP: Symbolic normalization
+TBD
 
 ## Dependencies
 For now, Z3 and flint
