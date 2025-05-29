@@ -18,7 +18,6 @@ while len(to_treat) > 0:
         ordered.append(tuple([s, ()]))
         continue
 
-    # TODO: Take a further disjunction here w.r.t. all possible orders
     for order in s.all_orders():
         print(f"### Order: {order}")
         neqs = s.all_non_increasing(order)
