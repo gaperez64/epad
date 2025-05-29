@@ -88,7 +88,7 @@ class TestLinDivs:
         left_pos = list(lds.all_disj_left_pos())
         assert len(left_pos) == 1
         neqs = left_pos[0].all_non_increasing(order)
-        assert ((0, 1, 1), (1, 0, 0)) in neqs
+        assert ((0, 1, 1), ((1, 0, 0), (0, 1, 0), (0, 0, 1))) in neqs
 
     def test_all_non_increasing(self):
         # Examples from the introduction of our SODA paper

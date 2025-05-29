@@ -46,14 +46,18 @@ class LinDivs(LinIneqs):
                 yield res.reduced()
 
     def all_disj_from_noninc(self, noninc):
-        for f, g in noninc:
-            S = sum([abs(c) for c in g])
-            for c in range(-1 * S, S + 1):
-                cf_min_g = tuple([c * f[i] - g[i]
-                                  for i in range(len(f))])
-                assert len(cf_min_g) == len(f)
+        for f, G in noninc:
+            for g in G:
+                new_eqs = []
+                S = sum([abs(c) for c in g])
+                for c in range(-1 * S, S + 1):
+                    cf_min_g = tuple([c * f[i] - g[i]
+                                      for i in range(len(f))])
+                    assert len(cf_min_g) == len(f)
+                    new_eqs.append(cf_min_g)
+
                 lds = LinDivs(self.F, self.G, self.get_ineqs(),
-                              self.get_eqs() + (cf_min_g,))
+                              self.get_eqs() + tuple(new_eqs))
                 for res in lds.all_disj_just_divs():
                     yield res.reduced()
 
@@ -114,7 +118,8 @@ class LinDivs(LinIneqs):
             extended = [tuple(([0] * len(order)) + [1])]  # and the constant(s)
             for idx in order[:lvaridx+1]:
                 rest = len(order) - idx  # implicit + 1 due to constants
-                extended.append(tuple(([0] * (idx - 1)) + [1] + ([0] * rest)))
+                assert rest + 1 + idx == len(extended[0])
+                extended.append(tuple(([0] * idx) + [1] + ([0] * rest)))
             # Use this to extend the column-based basis of the module
             basis_of_mod = self.basis_of_divmodule(pt)
             extended = list(transpose(basis_of_mod)) + extended
@@ -129,10 +134,20 @@ class LinDivs(LinIneqs):
             hnf_of_pt, _ = column_style_hnf(tuple([tuple([c]) for c in pt]))
             hnf_of_int = transpose(hnf_of_int)
             hnf_of_pt = transpose(hnf_of_pt)
-            for ridx in range(len(hnf_of_int)):
-                if hnf_of_int[ridx] != hnf_of_pt[ridx]:
-                    not_increasing.append(tuple([pt, hnf_of_int[ridx]]))
-                    break
+            # get the whole set of differences
+            non_inc_bases = [g for g in hnf_of_int
+                             if g not in hnf_of_pt]
+            # No nonincreasing basis should be all zeroes
+            assert all([any([c != 0 for c in g]) for g in non_inc_bases])
+            if len(non_inc_bases) > 0:
+                not_increasing.append(tuple([pt, tuple(non_inc_bases)]))
+            # NOTE: the code above is more general, gets all nonincreasing
+            # bases found; before (see below) we were getting just the first
+            # one
+            # for ridx in range(len(hnf_of_int)):
+            #     if hnf_of_int[ridx] != hnf_of_pt[ridx]:
+            #         not_increasing.append(tuple([pt, hnf_of_int[ridx]]))
+            #         break
 
         return not_increasing
 
@@ -166,7 +181,7 @@ class LinDivs(LinIneqs):
                 v[i] = math.gcd(*K[0])
             if u == tuple(v):
                 break
-        # Now we construct a matrix whose colums are h and all elements of g
+        # Now we construct a matrix whose columns are h and all elements of g
         # multiplied by their coefficient in v
         H = [h]
         for c, g in zip(v, self.G):
