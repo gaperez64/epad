@@ -142,8 +142,8 @@ class LinDivs(LinIneqs):
             non_inc_bases = [g for g in hnf_of_int if g not in hnf_of_pt]
             if len(non_inc_bases) > 0:
                 not_increasing.append(tuple([pt, tuple(non_inc_bases)]))
-            not_increasing = tuple(not_increasing)
 
+        not_increasing = tuple(not_increasing)
         return not_increasing
 
     def primitive_terms(self) -> Vec:
@@ -180,7 +180,8 @@ class LinDivs(LinIneqs):
         # multiplied by their coefficient in v
         H = [h]
         for c, g in zip(v, self.G):
-            H.append(tuple([c * a for a in g]))
+            if c != 0:
+                H.append(tuple([c * a for a in g]))
         H = tuple(H)
         return transpose(H)
 
