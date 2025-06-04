@@ -183,3 +183,20 @@ class LinDivs(LinIneqs):
             H.append(tuple([c * a for a in g]))
         H = tuple(H)
         return transpose(H)
+
+
+class OrdLinDivs:
+    def __init__(self,
+                 divs: LinDivs,
+                 order: Vec):
+        assert len(divs.get_ineqs() + divs.get_eqs()) == 0
+        self.F = divs.F
+        self.G = divs.G
+        self.order = order
+
+    def __str__(self):
+        divs = [vec2str(f) + " | " + vec2str(g)
+                for (f, g) in zip(self.F, self.G)]
+        o = " <= ".join([f"x{i}" for i in self.order])
+        s = f"order: {o}\n"
+        return s + "\n".join(divs)

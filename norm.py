@@ -1,4 +1,4 @@
-from systems.lindivs import LinDivs
+from systems.lindivs import LinDivs, OrdLinDivs
 
 # x + 1 | y - 2 && x + 1 | x + y
 lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
@@ -25,8 +25,7 @@ while len(to_treat) > 0:
             to_treat.extend(s.all_disj_from_noninc(neqs))
         else:
             print("### Increasing!")
-            ordered.append(tuple([s, order]))
+            ordered.append(OrdLinDivs(s, order))
 
-for s, order in ordered:
-    print(f"ordered system w.r.t. {order}")
-    print(str(s))
+for o in ordered:
+    print(str(o))
