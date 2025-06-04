@@ -1,7 +1,14 @@
+coverage==7.8.2
 iniconfig==2.1.0
 numpy==2.2.4
 packaging==24.2
+pandas==2.2.3
 pluggy==1.5.0
 pytest==8.3.5
+pytest-cov==6.1.1
+python-dateutil==2.9.0.post0
 python-flint==0.7.1
+pytz==2025.2
+six==1.17.0
+tzdata==2025.2
 z3-solver==4.14.1.0
