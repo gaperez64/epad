@@ -92,7 +92,7 @@ class LinDivs(LinIneqs):
                        self.get_eqs(), self.get_ineqs())
 
     # The order is assumed to be increasing
-    def all_non_increasing(self, order: Vec):
+    def all_non_increasing(self, order: Vec) -> Mat:
         assert len(self.F) > 0
         assert len(order) + 1 == len(self.F[0])
         not_increasing = []
@@ -124,30 +124,25 @@ class LinDivs(LinIneqs):
             basis_of_mod = self.basis_of_divmodule(pt)
             extended = list(transpose(basis_of_mod)) + extended
             extended = transpose(tuple(extended))
-            # Intersection
+            # Compute the intersection
             ker_of_extended = basis_of_ker(extended)
             ker_of_extended = ker_of_extended[:len(basis_of_mod[0])]
             res = matmul(basis_of_mod, ker_of_extended)
             # HNF of intersection
             hnf_of_int, _ = column_style_hnf(res)
+            hnf_of_int = transpose(hnf_of_int)
             # HNF of just pt
             hnf_of_pt, _ = column_style_hnf(tuple([tuple([c]) for c in pt]))
-            hnf_of_int = transpose(hnf_of_int)
             hnf_of_pt = transpose(hnf_of_pt)
-            # get the whole set of differences
-            non_inc_bases = [g for g in hnf_of_int
-                             if g not in hnf_of_pt]
-            # No nonincreasing basis should be all zeroes
-            assert all([any([c != 0 for c in g]) for g in non_inc_bases])
+            # Quick check: The HNFs should not contain trivial zeros
+            assert all([any([c != 0 for c in g]) for g in hnf_of_pt])
+            assert all([any([c != 0 for c in g]) for g in hnf_of_int])
+
+            # Get the whole set of differences
+            non_inc_bases = [g for g in hnf_of_int if g not in hnf_of_pt]
             if len(non_inc_bases) > 0:
                 not_increasing.append(tuple([pt, tuple(non_inc_bases)]))
-            # NOTE: the code above is more general, gets all nonincreasing
-            # bases found; before (see below) we were getting just the first
-            # one
-            # for ridx in range(len(hnf_of_int)):
-            #     if hnf_of_int[ridx] != hnf_of_pt[ridx]:
-            #         not_increasing.append(tuple([pt, hnf_of_int[ridx]]))
-            #         break
+            not_increasing = tuple(not_increasing)
 
         return not_increasing
 
