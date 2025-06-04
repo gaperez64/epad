@@ -1,3 +1,4 @@
+from systems.linineqs import LinIneqs
 from systems.lindivs import LinDivs, OrdLinDivs
 
 
@@ -12,7 +13,9 @@ def norm(lds: LinDivs, check_sym_inc=True, use_all_cx_inc=True):
         print("## LEFT-POSITIVE SUBSYSTEM:")
         print(str(s))
 
-        assert s.get_dim() > 0, "empty system?"
+        if not s:  # empty system
+            print("### We seem to have found a solution!")
+            continue
 
         cxs_per_order = dict()
         inc = False
@@ -50,8 +53,10 @@ print("Example from Antonia's paper")
 lds = LinDivs(tuple([(1, 0, 0, 0), (1, 0, 0, 1),
                      (0, 1, 0, 0), (0, 1, 0, 1)]),
               tuple([(0, 1, 0, 0), (0, 1, 0, 0),
-                     (0, 0, 1, 0), (0, 0, 1, 0)]))
+                     (0, 0, 1, 0), (0, 0, 1, 0)]),
+              tuple([(-1, 0, 0, 2),
+                     (0, -1, 0, 2),
+                     (0, 0, -1, 2)]))
 increasing = norm(lds, check_sym_inc=True, use_all_cx_inc=False)
 for o in increasing:
     print(str(o))
-

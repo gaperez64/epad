@@ -15,12 +15,7 @@ with equations and inequalities.
 
 ## (Wrong) design choices
 - We are only encoding systems, so no disjunctions.
-- Variables are quantified over the integers for now. This is a bit off since
-  after an affine change of variables we go to natural numbers instead. To
-  remediate this, we are asking that a system of linear constraints is always
-  given to represent that domain of the variables explicitly. (That is,
-  working on a system of divisibilities with no further constraints implicitly
-  tells the library that we have changed from integers to naturals as domain.)
+- Variables are quantified over the naturals, not the integers. 
 - Everything is tuples (of tuples).
 - We don't encode Ax = b but rather Ax - b = 0 and the last "coefficient" is
   the constant in the polynomial. Similar weirdness applies to inequalities.

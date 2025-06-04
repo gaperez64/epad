@@ -19,6 +19,9 @@ class LinDivs(LinIneqs):
         self.F = divisors
         self.G = dividends
 
+    def __bool__(self):
+        return len(self.F) > 0
+
     def get_dim(self):
         assert len(self.F) > 0
         return len(self.F[0]) - 1
@@ -27,7 +30,8 @@ class LinDivs(LinIneqs):
         return all([all([c >= 0 for c in row]) for row in self.F])
 
     def all_disj_left_pos(self):
-        fset = set(self.F)
+        some_neg = [f for f in self.F if any([c < 0 for c in f])]
+        fset = set(some_neg)
         for nonneg in chain.from_iterable(combinations(fset, n)
                                           for n in range(len(fset) + 1)):
             ineqs = list(self.get_ineqs())
@@ -36,10 +40,7 @@ class LinDivs(LinIneqs):
                 if f in nonneg:
                     h = tuple([c * -1 for c in f])
                 else:
-                    h = list(f)
-                    h[-1] += 1
-                    h = tuple(h)
-                assert len(h) == len(f)
+                    h = f
                 ineqs.append(h)
             ordered = LinDivs(self.F, self.G, tuple(ineqs), self.get_eqs())
             for res in ordered.all_disj_just_divs():
@@ -80,8 +81,11 @@ class LinDivs(LinIneqs):
         newF = []
         newG = []
         for f, g in zip(self.F, self.G):
+            if all([c == 0 for c in g]):
+                continue  # trivially true, everything divides 0
             d = math.gcd(*f, *g)
-            # we also factor out a -1 on the left if possible
+            assert d != 0
+            # we factor out a -1 on the left if possible
             if all([c < 0 for c in f]):
                 s = -1
             else:
@@ -156,11 +160,48 @@ class LinDivs(LinIneqs):
                 done.add(res)
 
     def all_disj_just_divs(self):
-        bases, periods = LinIneqs.solutions(self)
-        for b in bases:
-            F = affxvars(self.F, b, periods)
-            G = affxvars(self.G, b, periods)
-            yield LinDivs(F, G)
+        pending = [self]
+        while len(pending) > 0:
+            lds = pending.pop()
+            if len(lds.get_eqs() + lds.get_ineqs()) == 0:
+                yield lds
+                continue
+            # Otherwise, we need to split it
+            bases, periods = LinIneqs.solutions(lds)
+            for b in bases:
+                F = affxvars(lds.F, b, periods)
+                G = affxvars(lds.G, b, periods)
+                # (1) All left-hand sides consisting of zeros only, become
+                # equalities instead of divisibilities; also
+                # (2) all LHS with constants only, become a new equality
+                # constraint with an additional variable. So we count these
+                # first.
+                nconst = sum([1 for f in F if all([c == 0 for c in f[:-1]])])
+                eqs = []
+                cleanF = []
+                cleanG = []
+                pref_of_zeros = tuple([0] * nconst)
+                iconst = 0
+                for f, g in zip(F, G):
+                    if all([c == 0 for c in f]):
+                        eqs.append(pref_of_zeros + g)
+                    elif all([c == 0 for c in f[:-1]]):
+                        pref = [0] * iconst
+                        pref += [-1 * f[-1]]
+                        pref += [0] * (nconst - (iconst + 1))
+                        pref = tuple(pref)
+                        eqs.append(pref + g)
+                    else:
+                        cleanF.append(pref_of_zeros + f)
+                        cleanG.append(pref_of_zeros + g)
+                if len(cleanF) == 0:
+                    print("We got rid of all divisibilities! solved?")
+                else:
+                    res = LinDivs(tuple(cleanF),
+                                  tuple(cleanG),
+                                  tuple(),
+                                  tuple(eqs))
+                    pending.append(res)
 
     def basis_of_divmodule(self, h: Vec) -> Mat:
         v = [0] * len(self.F)

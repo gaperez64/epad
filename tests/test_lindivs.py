@@ -63,10 +63,23 @@ class TestLinDivs:
                       linqs.get_ineqs(),
                       linqs.get_eqs())
         disj = [d.get_divs() for d in lds.all_disj_just_divs()]
-        assert all([len(f) == 1 for (f, g) in disj])
-        disj = [(f[0], g[0]) for (f, g) in disj]
-        assert ((0, 5), (-3, -26)) in disj
-        assert ((0, 7), (-3, -15)) in disj
+        assert len(disj) == 0
+
+        # This is Antonia's example from the LICS paper
+        lds = LinDivs(tuple([(1, 0, 0, 0), (1, 0, 0, 1),
+                             (0, 1, 0, 0), (0, 1, 0, 1)]),
+                      tuple([(0, 1, 0, 0), (0, 1, 0, 0),
+                             (0, 0, 1, 0), (0, 0, 1, 0)]),
+                      tuple([(-1, 0, 0, 2),
+                             (0, -1, 0, 2),
+                             (0, 0, -1, 2)]))
+        disj = list(lds.all_disj_just_divs())
+        assert len(disj) == 1
+        F, G = disj[0].get_divs()
+        left_consts = [f[-1] for f in F]
+        assert 2 in left_consts and 3 in left_consts
+        right_consts = [g[-1] for g in G]
+        assert 2 in right_consts
 
     def test_all_disj_left_pos(self):
         linqs = LinIneqs(tuple([(-1, -1, -1, 10)]),
@@ -88,7 +101,7 @@ class TestLinDivs:
         left_pos = list(lds.all_disj_left_pos())
         assert len(left_pos) == 1
         neqs = left_pos[0].all_non_increasing(order)
-        assert ((0, 1, 1), ((1, 0, 0), (0, 1, 0), (0, 0, 1))) in neqs
+        assert ((1, 0, 1), ((1, 0, 0), (0, 0, 1))) in neqs
 
     def test_all_non_increasing(self):
         # Examples from the introduction of our SODA paper
