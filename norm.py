@@ -1,7 +1,10 @@
-from systems.linineqs import LinIneqs
 from systems.lindivs import LinDivs, OrdLinDivs
 
 
+# This is the main function of interest in the whole codebase, it implements
+# symbolic normalization and semantic normalization; the second parameter
+# controls how aggressively we add equality constraints based on witnesses of
+# nonincreasingness
 def norm(lds: LinDivs, check_sym_inc=True, use_all_cx_inc=True):
     print("# INPUT SYSTEM")
     print(str(lds))
@@ -40,6 +43,8 @@ def norm(lds: LinDivs, check_sym_inc=True, use_all_cx_inc=True):
     return ordered
 
 
+# TODO: Extend the list of examples below that we understand by hand! We can
+# draw inspiration from them to extend the test suite too
 print("Example from SODA paper, turns out to be unsat")
 # x + 1 | y - 2 && x + 1 | x + y
 lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
