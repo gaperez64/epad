@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/gaperez64/epad/graph/badge.svg?token=YQ2L4RBMJZ)](https://codecov.io/gh/gaperez64/epad)
+
 # Tools for the existential fragment of Presburger arithmetic with divisibility
 The first goal of this repository is to have a library to manipulate systems
 of divisibility constraints over linear (diophantine) polynomials conjoined
