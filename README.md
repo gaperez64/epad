@@ -1,3 +1,4 @@
+[![tests](https://github.com/gaperez64/epad/actions/workflows/python-app.yml/badge.svg)](https://github.com/gaperez64/epad/actions/workflows/python-app.yml)
 [![codecov](https://codecov.io/gh/gaperez64/epad/graph/badge.svg?token=YQ2L4RBMJZ)](https://codecov.io/gh/gaperez64/epad)
 
 # Tools for the existential fragment of Presburger arithmetic with divisibility
