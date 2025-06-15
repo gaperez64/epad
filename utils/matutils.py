@@ -1,10 +1,11 @@
 import numpy as np
 import math
 import flint
+from typing import Tuple, TypeAlias, List
 
-type Vec = tuple[int, ...]
-type Mat = tuple[Vec, ...]
-type Vecs = list[Vec]
+Vec: TypeAlias = Tuple[int, ...]
+Mat: TypeAlias = Tuple[Vec, ...]
+Vecs: TypeAlias = List[Vec]
 
 
 def vec2str(v: Vec) -> str:
