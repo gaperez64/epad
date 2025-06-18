@@ -62,8 +62,8 @@ class TestLinDivs:
                       tuple([(0, 11, -3, 1)]),
                       linqs.get_ineqs(),
                       linqs.get_eqs())
-        disj = [d.get_divs() for d in lds.all_disj_just_divs()]
-        assert len(disj) == 0
+        disj = list(lds.all_disj_just_divs())
+        assert len(disj) == 2
 
         # This is Antonia's example from the LICS paper
         lds = LinDivs(tuple([(1, 0, 0, 0), (1, 0, 0, 1),

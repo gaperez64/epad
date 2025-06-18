@@ -67,7 +67,7 @@ class LinDivs(LinIneqs):
             yield ordtyp
 
     def get_divs(self):
-        return self.F, self.G
+        return (self.F, self.G)
 
     def __str__(self):
         divs = [vec2str(f) + " | " + vec2str(g)
@@ -133,17 +133,17 @@ class LinDivs(LinIneqs):
             ker_of_extended = ker_of_extended[:len(basis_of_mod[0])]
             res = matmul(basis_of_mod, ker_of_extended)
             # HNF of intersection
-            hnf_of_int, _ = column_style_hnf(res)
+            hnf_of_int, a = column_style_hnf(res)
             hnf_of_int = transpose(hnf_of_int)
             # HNF of just pt
             hnf_of_pt, _ = column_style_hnf(tuple([tuple([c]) for c in pt]))
             hnf_of_pt = transpose(hnf_of_pt)
-            # Quick check: The HNFs should not contain trivial zeros
-            assert all([any([c != 0 for c in g]) for g in hnf_of_pt])
-            assert all([any([c != 0 for c in g]) for g in hnf_of_int])
 
             # Get the whole set of differences
-            non_inc_bases = [g for g in hnf_of_int if g not in hnf_of_pt]
+            # NOTE: the HNFs could contain trivial zeros
+            non_inc_bases = [g for g in hnf_of_int
+                             if g not in hnf_of_pt
+                             and any([c != 0 for c in g])]
             if len(non_inc_bases) > 0:
                 not_increasing.append(tuple([pt, tuple(non_inc_bases)]))
 
@@ -163,7 +163,10 @@ class LinDivs(LinIneqs):
         pending = [self]
         while len(pending) > 0:
             lds = pending.pop()
-            if len(lds.get_eqs() + lds.get_ineqs()) == 0:
+            # If the system is already pure divisibilities or has no
+            # divisibilities then it's ready
+            if len(lds.get_eqs() +
+                   lds.get_ineqs()) == 0 or not lds:
                 yield lds
                 continue
             # Otherwise, we need to split it
@@ -194,14 +197,11 @@ class LinDivs(LinIneqs):
                     else:
                         cleanF.append(pref_of_zeros + f)
                         cleanG.append(pref_of_zeros + g)
-                if len(cleanF) == 0:
-                    print("We got rid of all divisibilities! solved?")
-                else:
-                    res = LinDivs(tuple(cleanF),
-                                  tuple(cleanG),
-                                  tuple(),
-                                  tuple(eqs))
-                    pending.append(res)
+                res = LinDivs(tuple(cleanF),
+                              tuple(cleanG),
+                              tuple(),
+                              tuple(eqs))
+                pending.append(res)
 
     def basis_of_divmodule(self, h: Vec) -> Mat:
         v = [0] * len(self.F)

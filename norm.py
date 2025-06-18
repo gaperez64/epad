@@ -9,19 +9,24 @@ def norm(lds: LinDivs, check_sym_inc=True, use_all_cx_inc=True):
     to_treat = list(lds.all_disj_left_pos())
     ordered = []
     while len(to_treat) > 0:
+        print(f"size of to_treat = {len(to_treat)}")
         s = to_treat.pop()
 
-        if not s:  # empty system
+        if not s:  # trivial system: no divs or just divs
             continue
 
         cxs_per_order = dict()
         inc = False
         for order in s.all_orders():
             neqs = s.all_non_increasing(order)
-            if check_sym_inc and len(neqs) == 0:
+            if len(neqs) == 0:
                 ordered.append(OrdLinDivs(s, order))
-                inc = True
-                break
+                # If, additionally, we only care about symbolic
+                # increasingness, we can stop here!
+                if check_sym_inc:
+                    inc = True
+                    print("sym. increasingness FTW!")
+                    break
             cxs_per_order[order] = neqs
         if inc:
             continue
@@ -33,3 +38,19 @@ def norm(lds: LinDivs, check_sym_inc=True, use_all_cx_inc=True):
                 neqs = neqs[:1]
             to_treat.extend(s.all_disj_from_noninc(neqs))
     return ordered
+
+
+if __name__ == "__main__":
+    # Funky example by Alessio: essentially all variables
+    # should have the same value
+    lds = LinDivs(tuple([(1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0)]),
+                  tuple([(0, 1, 0, 0), (0, 0, 1, 0), (1, 0, 0, 0)]))
+    print(str(lds))
+    print("Let's try this with all optimizations on first:")
+    result = norm(lds, check_sym_inc=True, use_all_cx_inc=True)
+    print("Then only one counterexample:")
+    result = norm(lds, check_sym_inc=True, use_all_cx_inc=False)
+    print("Now with no optimizations:")
+    result = norm(lds, check_sym_inc=False, use_all_cx_inc=False)
+    print("Finally, only one opt = multiple counterexamples:")
+    result = norm(lds, check_sym_inc=False, use_all_cx_inc=False)
