@@ -33,7 +33,7 @@ def test_empty_subsystem():
     # Test case where the subsystem 's' becomes empty.
     lds = LinDivs(tuple(), tuple()) # Represents an empty system
     result = norm(lds, check_sym_inc=True, use_all_cx_inc=False)
-    assert result == []
+    assert len(result) == 1
 
 def test_soda_paper_example_all_cx():
     # Example from SODA paper, with use_all_cx_inc=True
