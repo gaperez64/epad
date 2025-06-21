@@ -7,6 +7,8 @@ from utils.matutils import (Mat, Vec, column_style_hnf,
 
 
 class LinDivs(LinIneqs):
+    next_id = 1
+
     def __init__(self,
                  divisors: Mat,
                  dividends: Mat,
@@ -18,6 +20,8 @@ class LinDivs(LinIneqs):
         assert all([len(f) == len(g) for f in divisors for g in dividends])
         self.F = divisors
         self.G = dividends
+        self.id = LinDivs.next_id
+        LinDivs.next_id += 1
 
     def __bool__(self):
         return len(self.F) > 0
@@ -28,6 +32,46 @@ class LinDivs(LinIneqs):
 
     def is_left_pos(self):
         return all([all([c >= 0 for c in row]) for row in self.F])
+
+    # This is the main function of interest in the whole codebase, it
+    # implements symbolic normalization and semantic normalization; the second
+    # parameter controls how aggressively we add equality constraints based on
+    # witnesses of nonincreasingness
+    def norm(self, check_sym_inc=True, use_all_cx_inc=True):
+        to_treat = list(self.all_disj_left_pos())
+        ordered = []
+        while len(to_treat) > 0:
+            s = to_treat.pop()
+
+            if not s:  # trivial system: no divs or just divs
+                ordered.append(s)
+                continue
+
+            cxs_per_order = dict()
+            inc = False
+            for order in s.all_orders():
+                neqs = s.all_non_increasing(order)
+                if len(neqs) == 0:
+                    already_ordered = OrdLinDivs(s, order)
+                    ordered.append(already_ordered)
+                    log(s, parent=s.id, msg=str(already_ordered))
+                    # If, additionally, we only care about symbolic
+                    # increasingness, we can stop here!
+                    if check_sym_inc:
+                        inc = True
+                        break
+                else:
+                    cxs_per_order[order] = neqs
+            if inc:
+                continue
+
+            for order, neqs in cxs_per_order.items():
+                # If desired, we can use a single counterexample and
+                # drop the rest
+                if not use_all_cx_inc:
+                    neqs = neqs[:1]
+                to_treat.extend(s.all_disj_from_noninc(neqs))
+        return ordered
 
     def all_disj_left_pos(self):
         some_neg = [f for f in self.F if any([c < 0 for c in f])]
@@ -43,6 +87,7 @@ class LinDivs(LinIneqs):
                     h = f
                 ineqs.append(h)
             ordered = LinDivs(self.F, self.G, tuple(ineqs), self.get_eqs())
+            log(ordered, parent=self.id, left_pos=True)
             for res in ordered.all_disj_just_divs():
                 yield res.reduced()
 
@@ -59,6 +104,7 @@ class LinDivs(LinIneqs):
 
                 lds = LinDivs(self.F, self.G, self.get_ineqs(),
                               self.get_eqs() + tuple(new_eqs))
+                log(lds, parent=self.id, non_inc=True)
                 for res in lds.all_disj_just_divs():
                     yield res.reduced()
 
@@ -92,8 +138,10 @@ class LinDivs(LinIneqs):
                 s = 1
             newF.append(tuple([s * a // d for a in f]))
             newG.append(tuple([b // d for b in g]))
-        return LinDivs(tuple(newF), tuple(newG),
-                       self.get_eqs(), self.get_ineqs())
+        res = LinDivs(tuple(newF), tuple(newG),
+                      self.get_eqs(), self.get_ineqs())
+        log(res, parent=self.id, reduced=True)
+        return res
 
     # The order is assumed to be increasing
     def all_non_increasing(self, order: Vec) -> Mat:
@@ -201,6 +249,7 @@ class LinDivs(LinIneqs):
                               tuple(cleanG),
                               tuple(),
                               tuple(eqs))
+                log(res, parent=lds.id, just_divs=True)
                 pending.append(res)
 
     def basis_of_divmodule(self, h: Vec) -> Mat:
@@ -242,3 +291,21 @@ class OrdLinDivs:
         o = " <= ".join([f"x{i}" for i in self.order])
         s = f"order: {o}\n"
         return s + "\n".join(divs)
+
+
+def log(lds: LinDivs, reduced=False, left_pos=False, non_inc=False,
+        just_divs=False, parent=None, msg=None):
+    print(f"start sys {lds.id}")
+    if reduced:
+        print(f"from {parent} reduced")
+    if left_pos:
+        print(f"from {parent} left pos")
+    if non_inc:
+        print(f"from {parent} made incr.")
+    if just_divs:
+        print(f"from {parent} just divs.")
+    if msg is None:
+        print(str(lds))
+    else:
+        print(msg)
+    print("end sys")
