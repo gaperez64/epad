@@ -293,19 +293,20 @@ class OrdLinDivs:
         return s + "\n".join(divs)
 
 
+log_pref = "[lindivs log] "
 def log(lds: LinDivs, reduced=False, left_pos=False, non_inc=False,
         just_divs=False, parent=None, msg=None):
-    print(f"start sys {lds.id}")
+    print(f"{log_pref}start sys {lds.id}")
     if reduced:
-        print(f"from {parent} reduced")
+        print(f"{log_pref}from {parent} reduced")
     if left_pos:
-        print(f"from {parent} left pos")
+        print(f"{log_pref}from {parent} left pos")
     if non_inc:
-        print(f"from {parent} made incr.")
+        print(f"{log_pref}from {parent} made incr.")
     if just_divs:
-        print(f"from {parent} just divs.")
+        print(f"{log_pref}from {parent} just divs.")
     if msg is None:
         print(str(lds))
     else:
-        print(msg)
-    print("end sys")
+        print(f"{log_pref}{msg}")
+    print(f"{log_pref}end sys")
