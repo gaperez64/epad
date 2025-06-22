@@ -38,6 +38,7 @@ class LinDivs(LinIneqs):
     # parameter controls how aggressively we add equality constraints based on
     # witnesses of nonincreasingness
     def norm(self, check_sym_inc=True, use_all_cx_inc=True):
+        log(self)
         to_treat = list(self.all_disj_left_pos())
         ordered = []
         while len(to_treat) > 0:
