@@ -28,7 +28,6 @@ def read_log(fname):
                 assert not insys
                 insys = True
                 idx = int(match.group(1))
-                print(f"idx = {idx}")
                 cur = System(idx)
                 if root is None:
                     root = cur
@@ -39,7 +38,6 @@ def read_log(fname):
             if match:
                 assert insys
                 pred = int(match.group(1))
-                print(f"pred = {pred}")
                 systems[pred].subsys.append(cur)
                 cur.reason = match.group(2)
                 continue
