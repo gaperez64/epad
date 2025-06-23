@@ -49,8 +49,11 @@ Lipshitz' transformation into increasing normal form if we have:
 - [X] A recursive-style algorithm to keep finding nonincreasing subformulas to
   treat with the procedure above.
 
-## WIP: Symbolic normalization
-TBD
+## Symbolic normalization
+To check whether a system is increasing for some symbolic order, we can consider
+all orders and check if some of them gives an empty set of nonincreasing basis of
+the submodule arising from the order restriction! Then, in the symbolic case, 
+we're done; in the semantic case, we still need to consider all of them and normalize.
 
 ## Dependencies
-For now, Z3 and flint
+For now, Z3, pyyaml and flint
