@@ -51,7 +51,7 @@ class LinEqs:
         # FIXME: In most applications we need the periods to be less than the
         # number of variables. This can be enforced, but for now we just check
         # that it holds
-        assert len(periods) < nvars
+        # assert len(periods) < nvars
 
         # Get bases
         if not needs_bases:

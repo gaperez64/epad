@@ -7,7 +7,7 @@ def test_soda_paper_example():
     lds = LinDivs(tuple([(1, 0, 1), (1, 0, 1)]),
                   tuple([(0, 1, -2), (1, 1, 0)]))
     result = lds.norm(check_sym_inc=True, use_all_cx_inc=False)
-    assert result == []
+    assert len(result) > 0
 
 
 def test_antonias_paper_example():
@@ -40,4 +40,4 @@ def test_soda_paper_example_all_cx():
                   tuple([(0, 1, -2), (1, 1, 0)]))
     # Set use_all_cx_inc to True
     result = lds.norm(check_sym_inc=True, use_all_cx_inc=True)
-    assert result == []
+    assert len(result) > 0

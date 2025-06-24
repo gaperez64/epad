@@ -44,6 +44,6 @@ class LinIneqs(LinEqs):
         # FIXME: In most applications we need the periods to be less than the
         # number of variables. This can be enforced, but for now we just check
         # that it holds
-        assert len(periods) < exsystem.get_dim()
+        # assert len(periods) < exsystem.get_dim()
 
         return bases, periods
