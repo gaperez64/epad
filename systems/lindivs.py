@@ -1,5 +1,5 @@
 import math
-from itertools import chain, combinations, permutations
+from itertools import chain, combinations, permutations, product
 from systems.linineqs import LinIneqs
 from utils.matutils import (Mat, Vec, column_style_hnf,
                             vec2str, affxvars, matmul,
@@ -94,17 +94,23 @@ class LinDivs(LinIneqs):
 
     def all_disj_from_noninc(self, noninc):
         for f, G in noninc:
+            disj_eqs = dict()
+            # For each witness of nonincreasingness, we get equations that
+            # encode the fact. A disjunction over subsystems per equation is
+            # equisat with the original system.
             for g in G:
-                new_eqs = []
+                disj_eqs[g] = []
                 S = sum([abs(c) for c in g])
                 for c in range(-1 * S, S + 1):
                     cf_min_g = tuple([c * f[i] - g[i]
                                       for i in range(len(f))])
                     assert len(cf_min_g) == len(f)
-                    new_eqs.append(cf_min_g)
-
+                    disj_eqs[g].append(cf_min_g)
+            # For each witness, we need to choose one equation at a time to
+            # get a subsytem.
+            for new_eqs in product(*(disj_eqs.values())):
                 lds = LinDivs(self.F, self.G, self.get_ineqs(),
-                              self.get_eqs() + tuple(new_eqs))
+                              self.get_eqs() + new_eqs)
                 log(lds, parent=self.id, non_inc=True)
                 for res in lds.all_disj_just_divs():
                     yield res.reduced()
@@ -223,27 +229,34 @@ class LinDivs(LinIneqs):
             for b in bases:
                 F = affxvars(lds.F, b, periods)
                 G = affxvars(lds.G, b, periods)
-                # (1) All left-hand sides consisting of zeros only, become
-                # equalities instead of divisibilities; also
-                # (2) all LHS with constants only, become a new equality
+                # All LHS with constants only, become a new equality
                 # constraint with an additional variable. So we count these
                 # first.
-                nconst = sum([1 for f in F if all([c == 0 for c in f[:-1]])])
+                nconst = sum([1 for f in F
+                              if f[-1] != 0 and all([c == 0 for c in f[:-1]])])
                 eqs = []
                 cleanF = []
                 cleanG = []
                 pref_of_zeros = tuple([0] * nconst)
                 iconst = 0
                 for f, g in zip(F, G):
-                    if all([c == 0 for c in f]):
-                        eqs.append(pref_of_zeros + g)
-                    elif all([c == 0 for c in f[:-1]]):
+                    if all([c == 0 for c in f]):  # f = 0
+                        if all([c == 0 for c in g]):
+                            # ignore it, it's trivially true
+                            pass
+                        else:
+                            # nontrivial g and f = 0, this is only possible if
+                            # g = 0 because only 0 is divisible by 0
+                            eqs.append(pref_of_zeros + g)
+                    elif all([c == 0 for c in f[:-1]]):  # f = c
                         pref = [0] * iconst
                         pref += [-1 * f[-1]]
                         pref += [0] * (nconst - (iconst + 1))
                         pref = tuple(pref)
                         eqs.append(pref + g)
-                    else:
+                        # we should not be adding nonsense equations
+                        assert any([c != 0 for c in eqs[-1]])
+                    else:  # nonconstant f
                         cleanF.append(pref_of_zeros + f)
                         cleanG.append(pref_of_zeros + g)
                 res = LinDivs(tuple(cleanF),
@@ -295,6 +308,8 @@ class OrdLinDivs:
 
 
 log_pref = "[lindivs log] "
+
+
 def log(lds: LinDivs, reduced=False, left_pos=False, non_inc=False,
         just_divs=False, parent=None, msg=None):
     print(f"{log_pref}start sys {lds.id}")
