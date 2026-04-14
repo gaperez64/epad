@@ -4,7 +4,7 @@ numpy==2.4.4
 packaging==24.2
 pandas==3.0.2
 pluggy==1.5.0
-pytest==8.3.5
+pytest==9.0.3
 pytest-cov==6.1.1
 python-dateutil==2.9.0.post0
 python-flint==0.8.0
