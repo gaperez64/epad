@@ -13,14 +13,10 @@ with equations and inequalities.
    Constraints", by Rémy Défossez, Christoph Haase, Alessio Mansutti, and Guillermo
    A. Pérez.](https://epubs.siam.org/doi/10.1137/1.9781611977912.128))
 
-## (Wrong) design choices
-- We are only encoding systems, so no disjunctions.
-- Variables are quantified over the naturals, not the integers. 
-- Everything is tuples (of tuples).
-- We don't encode Ax = b but rather Ax - b = 0 and the last "coefficient" is
-  the constant in the polynomial. Similar weirdness applies to inequalities.
-
 ## Lipshitz' normalization
+TODO
+
+## Requirements to implement normalization
 Given a system of divisibilities and linear constraints, we can implement
 Lipshitz' transformation into increasing normal form if we have:
 - [X] A way of obtaining a (hybrid) semilinear representation of the solutions
@@ -49,11 +45,14 @@ Lipshitz' transformation into increasing normal form if we have:
 - [X] A recursive-style algorithm to keep finding nonincreasing subformulas to
   treat with the procedure above.
 
-## Symbolic normalization
-To check whether a system is increasing for some symbolic order, we can consider
-all orders and check if some of them gives an empty set of nonincreasing basis of
-the submodule arising from the order restriction! Then, in the symbolic case, 
-we're done; in the semantic case, we still need to consider all of them and normalize.
+# Miscellaneous
+
+## Design choices
+- We are only encoding systems, so no disjunctions.
+- Variables are quantified over the naturals, not the integers. 
+- Everything is tuples (of tuples).
+- We don't encode Ax = b but rather Ax - b = 0 and the last "coefficient" is
+  the constant in the polynomial. Similar weirdness applies to inequalities.
 
 ## Dependencies
 For now, Z3, pyyaml and flint
