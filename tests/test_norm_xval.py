@@ -157,6 +157,81 @@ def any_leaf_sat(leaves):
     return None if saw_unknown else False
 
 
+def chain(n: int) -> LinDivs:
+    """The Lipshitz/EPAD divisibility chain over x_0,...,x_n:
+
+        x_i | x_{i+1} ∧ (x_i + 1) | x_{i+1}     for i = 0,...,n-1
+
+    Every solution satisfies x_{i+1} >= x_i * (x_i + 1), so x_i grows
+    doubly exponentially in i.  This is Section 6 of the KNF note,
+    stripped of the auxiliary x_0=2 and x_i>=2 constraints.
+    """
+    veclen = (n + 1) + 1
+
+    def vec(pairs, const=0):
+        v = [0] * veclen
+        for i, c in pairs:
+            v[i] = c
+        v[-1] = const
+        return tuple(v)
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(i, 1)]))
+        G.append(vec([(i + 1, 1)]))
+        F.append(vec([(i, 1)], const=1))
+        G.append(vec([(i + 1, 1)]))
+    return LinDivs(tuple(F), tuple(G))
+
+
+def chain_with_yz(n: int) -> LinDivs:
+    """The chain over x_0,...,x_n extended with two fresh variables y, z
+    and divisibilities
+
+        (y - z) | x_1     and     x_n | (y + z),
+
+    designed to force non-increasingness for every total order on the
+    variables (the chain pins LV(x_n) = x_n while the new constraints
+    drag x_n below max(y,z) and y,z below x_n simultaneously).
+    """
+    veclen = (n + 3) + 1
+    y_idx = n + 1
+    z_idx = n + 2
+
+    def vec(pairs, const=0):
+        v = [0] * veclen
+        for i, c in pairs:
+            v[i] = c
+        v[-1] = const
+        return tuple(v)
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(i, 1)]))
+        G.append(vec([(i + 1, 1)]))
+        F.append(vec([(i, 1)], const=1))
+        G.append(vec([(i + 1, 1)]))
+    F.append(vec([(y_idx, 1), (z_idx, -1)]))
+    G.append(vec([(1, 1)]))
+    F.append(vec([(n, 1)]))
+    G.append(vec([(y_idx, 1), (z_idx, 1)]))
+    return LinDivs(tuple(F), tuple(G))
+
+
+def _outcome(fn):
+    """Run a normaliser and report ('ok', nleaves) or (exc_name, None)."""
+    sink = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(sink):
+            r = _with_timeout(NORM_TIMEOUT_S, fn,
+                              check_sym_inc=True, use_all_cx_inc=False)
+        return ("ok", len(r))
+    except _NormTimeout:
+        return ("timeout", None)
+    except Exception as e:
+        return (type(e).__name__, None)
+
+
 def random_lindivs(rng: random.Random, nvars: int, ndivs: int,
                    coef_range=COEF_RANGE):
     """Generate a random LinDivs.
@@ -264,6 +339,38 @@ def test_xval_curated_sat():
     # Both should find sat (this case is small enough for z3).
     assert lip_sat is True
     assert knf_sat is True
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4])
+def test_xval_chain(n):
+    """The plain divisibility chain: both normalisers should agree
+    (in this case both succeed and produce the same leaf count)."""
+    lds = chain(n)
+    lip = _outcome(lds.norm)
+    knf = _outcome(lds.knf_norm)
+    assert lip == knf, (
+        f"chain(n={n}): norm={lip} knf_norm={knf}"
+    )
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_xval_chain_with_yz(n):
+    """The chain extended with y-z|x_1 and x_n|y+z forces a primitive
+    LHS with mixed signs, which the EPAD preprocessing currently does
+    not fully neutralise.  Both normalisers must still agree on the
+    *outcome* (success status, leaf count, or exception type)."""
+    lds = chain_with_yz(n)
+    lip = _outcome(lds.norm)
+    knf = _outcome(lds.knf_norm)
+    assert lip[0] == knf[0], (
+        f"chain_with_yz(n={n}) disagree on outcome: "
+        f"norm={lip} knf_norm={knf}"
+    )
+    if lip[0] == "ok":
+        assert lip[1] == knf[1], (
+            f"chain_with_yz(n={n}) disagree on leaf count: "
+            f"norm={lip[1]} knf_norm={knf[1]}"
+        )
 
 
 def test_xval_curated_soda_paper():
