@@ -266,6 +266,148 @@ class LinDivs(LinIneqs):
                 log(res, parent=lds.id, just_divs=True)
                 pending.append(res)
 
+    def basis_of_divmodule_knf(self, f: Vec, L_gens: Mat) -> Mat:
+        """M̃f(Φ,L): least submodule of R containing {f}∪L, closed under
+        divisibility transfer. Generalises basis_of_divmodule to L≠{0}."""
+        v = [0] * len(self.F)
+        base_gens = [f] + list(L_gens)
+        while True:
+            u = tuple(v)
+            for i, fi in enumerate(self.F):
+                # Find gcd of b s.t. b*fi ∈ span(base_gens, v[j]*g_j).
+                # Encode as: -fi*b + sum(gen*λ) + sum(u[j]*g_j*z_j) = 0
+                Mt = [[-1 * c for c in fi]]
+                for gen in base_gens:
+                    Mt.append(list(gen))
+                for j, gj in enumerate(self.G):
+                    Mt.append([u[j] * c for c in gj])
+                M = transpose(tuple(Mt))
+                K = basis_of_ker(M)
+                v[i] = math.gcd(*K[0])
+            if u == tuple(v):
+                break
+        H = list(base_gens)
+        for c, g in zip(v, self.G):
+            if c != 0:
+                H.append(tuple([c * a for a in g]))
+        return transpose(tuple(H))
+
+    def all_non_increasing_knf(self, order: Vec, L_gens: Mat) -> Mat:
+        """Return (f, witnesses) pairs where the KNF condition fails in R/L.
+
+        KNF holds for f iff M̃f(Φ,L) ∩ (R_≤k + L) = Zf + L where k=LV_χ(f).
+        """
+        assert len(self.F) > 0
+        assert len(order) + 1 == len(self.F[0])
+        not_increasing = []
+        for pt in self.primitive_terms():
+            assert all([c >= 0 for c in pt])
+            lvar = -1
+            lvaridx = -1
+            for i, idx in enumerate(reversed(order)):
+                if pt[idx] != 0:
+                    lvar = idx
+                    lvaridx = len(order) - 1 - i
+            assert lvar >= 0
+            assert 0 <= lvaridx < len(order)
+
+            # Basis of R_≤k (constant + variables appearing before lvaridx)
+            r_leq_k = [tuple(([0] * len(order)) + [1])]  # constant
+            for idx in order[:lvaridx + 1]:
+                rest = len(order) - idx
+                r_leq_k.append(tuple(([0] * idx) + [1] + ([0] * rest)))
+
+            # M̃f(Φ,L) as column matrix
+            basis_of_mod = self.basis_of_divmodule_knf(pt, L_gens)
+            nbasis_cols = len(basis_of_mod[0])
+
+            # Intersection of M̃f(Φ,L) with (R_≤k + L)
+            # Combine M̃f columns and (R_≤k ∪ L) columns, find kernel
+            r_leq_k_plus_L = r_leq_k + list(L_gens)
+            extended = list(transpose(basis_of_mod)) + r_leq_k_plus_L
+            extended = transpose(tuple(extended))
+            ker = basis_of_ker(extended)
+            ker_u = ker[:nbasis_cols]   # coefficients for M̃f columns
+            if not any(any(c != 0 for c in row) for row in ker_u):
+                continue
+            res = matmul(basis_of_mod, ker_u)
+
+            # HNF of intersection
+            hnf_int, _ = column_style_hnf(res)
+            hnf_int_rows = set(transpose(hnf_int))
+
+            # HNF of Zf + L (the target)
+            zf_L_cols = [pt] + list(L_gens)
+            zf_L_mat = transpose(tuple(zf_L_cols))
+            hnf_zf_L, _ = column_style_hnf(zf_L_mat)
+            hnf_zf_L_rows = set(transpose(hnf_zf_L))
+
+            # Witnesses: HNF basis vectors in intersection but not in Zf+L
+            non_inc = [g for g in hnf_int_rows
+                       if g not in hnf_zf_L_rows
+                       and any(c != 0 for c in g)]
+            if non_inc:
+                not_increasing.append((pt, tuple(non_inc)))
+
+        return tuple(not_increasing)
+
+    def all_disj_from_noninc_knf(self, noninc, L_gens: Mat):
+        """Yield (child_LinDivs, new_L_gens) pairs, one per case split.
+
+        Each witness g for f generates the case split f|g, branching on
+        cf - g = 0 for c ∈ {-S,...,S} with S = ‖g‖₁.  The equality is
+        accumulated in L instead of being substituted into the system.
+        """
+        for f, G in noninc:
+            disj_new_L = dict()
+            for g in G:
+                disj_new_L[g] = []
+                S = sum(abs(c) for c in g)
+                for c in range(-S, S + 1):
+                    cf_min_g = tuple([c * f[i] - g[i]
+                                      for i in range(len(f))])
+                    disj_new_L[g].append(cf_min_g)
+            for new_gens in product(*(disj_new_L.values())):
+                new_L = tuple(list(L_gens) + list(new_gens))
+                child = LinDivs(self.F, self.G,
+                                self.get_ineqs(), self.get_eqs())
+                log(child, parent=self.id, non_inc=True, L_gens=new_L)
+                yield (child, new_L)
+
+    def knf_norm(self, check_sym_inc=True, use_all_cx_inc=True):
+        """KNF normalization: accumulate equalities in L instead of
+        substituting variables.  Returns a list of KNFLeaf (or LinDivs
+        for trivially empty branches)."""
+        log(self)
+        # Same sign/linear preprocessing as norm()
+        to_treat = [(s, tuple()) for s in self.all_disj_left_pos()]
+        ordered = []
+        while to_treat:
+            s, L_gens = to_treat.pop()
+            if not s:
+                ordered.append(s)
+                continue
+            cxs_per_order = dict()
+            inc = False
+            for order in s.all_orders():
+                neqs = s.all_non_increasing_knf(order, L_gens)
+                if len(neqs) == 0:
+                    leaf = KNFLeaf(s, order, L_gens)
+                    ordered.append(leaf)
+                    log(s, parent=s.id, msg=str(leaf), L_gens=L_gens)
+                    if check_sym_inc:
+                        inc = True
+                        break
+                else:
+                    cxs_per_order[order] = neqs
+            if inc:
+                continue
+            for order, neqs in cxs_per_order.items():
+                if not use_all_cx_inc:
+                    neqs = neqs[:1]
+                to_treat.extend(s.all_disj_from_noninc_knf(neqs, L_gens))
+        return ordered
+
     def basis_of_divmodule(self, h: Vec) -> Mat:
         v = [0] * len(self.F)
         while True:
@@ -307,11 +449,31 @@ class OrdLinDivs:
         return s + "\n".join(divs)
 
 
+class KNFLeaf:
+    def __init__(self,
+                 divs: LinDivs,
+                 order: Vec,
+                 L_gens: Mat):
+        assert len(divs.get_ineqs() + divs.get_eqs()) == 0
+        self.F = divs.F
+        self.G = divs.G
+        self.order = order
+        self.L_gens = L_gens
+
+    def __str__(self):
+        divs = [vec2str(f) + " | " + vec2str(g)
+                for (f, g) in zip(self.F, self.G)]
+        o = " <= ".join([f"x{i}" for i in self.order])
+        L_str = (", ".join(vec2str(l) + " = 0" for l in self.L_gens)
+                 if self.L_gens else "empty")
+        return f"order: {o}\nL: {L_str}\n" + "\n".join(divs)
+
+
 log_pref = "[lindivs log] "
 
 
 def log(lds: LinDivs, reduced=False, left_pos=False, non_inc=False,
-        just_divs=False, parent=None, msg=None):
+        just_divs=False, parent=None, msg=None, L_gens=None):
     print(f"{log_pref}start sys {lds.id}")
     if reduced:
         print(f"{log_pref}from {parent} reduced")
@@ -322,7 +484,10 @@ def log(lds: LinDivs, reduced=False, left_pos=False, non_inc=False,
     if just_divs:
         print(f"{log_pref}from {parent} just divs.")
     if msg is None:
-        print(str(lds))
+        s = str(lds)
+        if L_gens:
+            s += "\nL: " + ", ".join(vec2str(l) + " = 0" for l in L_gens)
+        print(s)
     else:
         print(f"{log_pref}{msg}")
     print(f"{log_pref}end sys")

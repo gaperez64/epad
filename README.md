@@ -91,6 +91,78 @@ one fewer free variable and is re-normalized recursively, ultimately yielding
 unsatisfiable over the naturals — normalization still terminates with the
 disjunctive case split, which is what the test asserts.)
 
+## KNF (kernel) normalization
+
+`LinDivs.knf_norm` is a quotient-module variant of Lipshitz' procedure
+described in the companion note *Kernel Normal Form and Flat Presentations
+for Linear Divisibility Constraints*. Instead of substituting variables
+after each non-increasingness witness, it accumulates the chosen
+equalities inside a submodule `L ≤ Z^{d+1}` (the "kernel state") and
+tests increasingness in the quotient `R/L`.
+
+### High-level overview
+
+1. Shared preprocessing (`all_disj_left_pos`, `all_disj_just_divs`,
+   `reduced`) is reused verbatim, so every KNF branch starts from a
+   positive pure divisibility system, same as in Lipshitz.
+2. **KNF check.** For each primitive divisor `f` and order `χ`,
+   `all_non_increasing_knf` computes a basis of the *quotient*
+   divisibility module
+   `M̃f(Φ, L) = least submodule of R containing L ∪ {f} closed under
+   divisibility transfer`
+   via `basis_of_divmodule_knf`, intersects it with `R_{≤LV(f)} + L`,
+   and compares the HNF of the intersection against the HNF of
+   `Zf + L`. Witnesses are HNF basis vectors of the intersection that
+   do not appear in `Zf + L`.
+3. **Branching.** For each witness `(f, g)`,
+   `all_disj_from_noninc_knf` adds `c·f − g = 0` to `L` for every
+   integer `c` in `[−S, S]` (with `S = Σ|g_i|`). The divisibility
+   system itself is **not** modified — only `L` grows. By Lemma 3.2
+   of the note, `rk(L)` strictly increases at every step, so the
+   search has depth at most `d + 1`.
+4. **Leaves** are returned as `KNFLeaf` objects (a `LinDivs` together
+   with an `order` and a tuple `L_gens`).
+
+The same `check_sym_inc` and `use_all_cx_inc` flags from `norm` apply,
+and the trace log uses the same `[lindivs log]` prefix — every branch
+prints the accumulated `L` alongside the divisibility system, so the
+existing `ldivslog.py` viewer also works on KNF runs.
+
+### Example
+
+The SODA example from `test_knf_soda_paper_example`,
+
+```
+x + 1 | y − 2   ∧   x + 1 | x + y
+```
+
+```python
+from systems.lindivs import LinDivs
+lds = LinDivs(divisors =((1, 0, 1), (1, 0, 1)),
+              dividends=((0, 1, -2), (1, 1, 0)))
+leaves = lds.knf_norm(check_sym_inc=True, use_all_cx_inc=False)
+```
+
+returns a list of `KNFLeaf` objects. For the order `x < y`, the divisor
+`x + 1` is non-increasing for the same reason as in Lipshitz: the
+quotient module `M̃_{x+1}(Φ, ∅)` intersected with `R_{≤x} + ∅` contains
+`x` and `1`, while `Z·(x+1)` does not, so HNF comparison yields a
+witness `g`. Instead of substituting variables, KNF adds an equality
+`c·(x+1) − g = 0` to `L` and recurses. The original `F`, `G` of the
+`KNFLeaf` are unchanged from the input; the accumulated equalities are
+visible in `leaf.L_gens`.
+
+## Cross-validation against Lipshitz
+
+`tests/test_norm_xval.py` cross-validates the two normalizers using
+z3: a leaf is sat (under the EPAD non-negative reparametrisation) iff
+its divisibilities and (for `KNFLeaf`) the equalities `l(x) = 0` for
+`l ∈ L_gens` are jointly satisfiable. The harness runs both
+normalizers on randomised small inputs, asks z3 whether *any* leaf is
+sat for each, and asserts the two verdicts agree. Both the
+normalization step (via `SIGALRM`) and every z3 check have explicit
+timeouts; trials whose verdicts are inconclusive are skipped.
+
 ## Requirements to implement normalization
 Given a system of divisibilities and linear constraints, we can implement
 Lipshitz' transformation into increasing normal form if we have:
@@ -130,4 +202,20 @@ Lipshitz' transformation into increasing normal form if we have:
   the constant in the polynomial. Similar weirdness applies to inequalities.
 
 ## Dependencies
-For now, Z3, pyyaml and flint
+
+Runtime:
+- [`numpy`](https://numpy.org/) for matrix arithmetic in `utils/matutils.py`.
+- [`python-flint`](https://github.com/flintlib/python-flint) for the
+  Hermite normal form / kernel routines used by normalization.
+- [`z3-solver`](https://github.com/Z3Prover/z3) for the
+  decision-procedure backend in `systems/lineqs.py` and in the
+  cross-validation tests.
+- [`PyYAML`](https://pyyaml.org/) for pretty-printing the trace log
+  via `ldivslog.py`.
+
+Test / CI:
+- [`pytest`](https://pytest.org/) and
+  [`pytest-cov`](https://github.com/pytest-dev/pytest-cov) for the
+  test suite and coverage reporting.
+
+Exact pinned versions are listed in `requirements.txt`.
