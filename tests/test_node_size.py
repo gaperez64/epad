@@ -1,0 +1,293 @@
+"""Stress tests for the node-representation-size hunt (experiments.node_size).
+
+These exercise the compact-stratum instrument described in the companion note
+(Conjecture 12.3 / Problems 16.1-16.3): the coefficient bit-size of the KNF
+equality module `L` accumulated at a leaf *is* the node-representation size.
+
+The tests double as regression guards for two facts the hunt established:
+
+  * Every family the normalizer can fully process has a *small* (mostly empty)
+    existential increasing stratum -- no counterexample to compactness was
+    found.
+  * The Section 14 obstruction is real and now measurable: a *bad fixed
+    order* is finitely KNF-repairable, but only with a quotient module `L`
+    whose coefficients blow up doubly exponentially (bit-length doubling per
+    step), while the good order needs an empty `L`.  This is exactly why the
+    compactness conjecture must be existential over orders.
+
+Two earlier limitations have been fixed and the tests now guard the fix:
+  - mixed-sign divisor LHS is normalised to positive form (f|g iff -f|g), so
+    inputs like chain_with_yz no longer trip a precondition;
+  - the non-increasingness witness test now uses true Z-module membership, so
+    `knf_norm` no longer loops on bad orders under `check_sym_inc=False`
+    (the old literal-HNF-row test produced spurious witnesses).
+"""
+
+import pytest
+
+import contextlib
+import io
+
+from systems.lindivs import LinDivs
+from experiments.node_size import (
+    l_metrics, l_metrics_reduced, l_metrics_lll, reduce_L, reduce_L_lll,
+    leaf_is_sat, existential_min_node_size, solution_compatible_L,
+    min_node_size_over_orders,
+    chain, antonia, all_equal, doubling_chain, cross, cross_chain,
+    forward_order, reverse_order, chain_solution,
+)
+
+
+# --------------------------------------------------------------------------
+# metric / sat helpers
+# --------------------------------------------------------------------------
+
+def test_l_metrics_empty_and_nonempty():
+    assert l_metrics(()) == {"ngen": 0, "max_abs": 0, "max_bits": 0,
+                             "total_bits": 0}
+    m = l_metrics(((6, -1, 0), (0, 0, 8)))
+    assert m["ngen"] == 2
+    assert m["max_abs"] == 8
+    assert m["max_bits"] == 4          # 8 -> 0b1000
+    assert m["total_bits"] == 3 + 1 + 4   # 6->3 bits, 1->1 bit, 8->4 bits
+
+
+def test_leaf_is_sat_basic():
+    # x | y is sat over the naturals (x=1).
+    assert leaf_is_sat(LinDivs(((1, 0, 0),), ((0, 1, 0),))) is True
+    # 0 = ... empty system trivially sat.
+    assert leaf_is_sat(LinDivs(tuple(), tuple())) is True
+
+
+# --------------------------------------------------------------------------
+# Existential node size -- the quantity the compactness conjecture is about.
+# A small/empty L for satisfiable families is *consistent with* (not a proof
+# of) the conjecture; a super-polynomial trend would be a counterexample.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 5])
+def test_chain_has_empty_existential_stratum(n):
+    r = existential_min_node_size(chain(n))
+    assert r["status"] == "ok"
+    assert r["n_sat"] >= 1
+    # The forward order is already increasing, so the compact stratum is empty.
+    assert r["min"]["total_bits"] == 0
+    assert r["best_order"] == forward_order(n)
+
+
+@pytest.mark.parametrize("n", [1, 2, 3])
+def test_antonia_has_empty_existential_stratum(n):
+    r = existential_min_node_size(antonia(n))
+    assert r["status"] == "ok"
+    assert r["n_sat"] >= 1
+    assert r["min"]["total_bits"] == 0
+
+
+@pytest.mark.parametrize("n", [2, 3])
+def test_all_equal_has_compact_stratum(n):
+    # The divisibility cycle x_i | x_{i+1 mod n} forces equalities, so L is
+    # non-empty -- but it stays tiny (unit coefficients).
+    r = existential_min_node_size(all_equal(n))
+    assert r["status"] == "ok"
+    assert r["n_sat"] >= 1
+    assert r["min"]["max_abs"] <= 1
+    assert r["min"]["total_bits"] <= n
+
+
+# --------------------------------------------------------------------------
+# Section 14 obstruction: a bad fixed order IS finitely KNF-repairable, but
+# only with doubly-exponentially large coefficients in L.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4])
+def test_forward_order_is_increasing(n):
+    r = solution_compatible_L(chain(n), forward_order(n),
+                              model=chain_solution(n))
+    assert r["status"] == "increasing"
+    assert r["total_bits"] == 0
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 5, 6, 7, 8])
+def test_reverse_order_forces_coefficient_blowup(n):
+    # The reverse (bad) order terminates -- it is finitely repairable, contra
+    # the earlier spurious "stuck" diagnosis caused by the witness bug -- but
+    # the coefficients in L blow up: max bit-length roughly DOUBLES each step,
+    # i.e. bit(lambda) = 2^Omega(n), exactly the Section 14 obstruction.
+    r = solution_compatible_L(chain(n), reverse_order(n),
+                              model=chain_solution(n))
+    assert r["status"] == "increasing"
+    # Compare against the good order, which needs an empty stratum.
+    fwd = solution_compatible_L(chain(n), forward_order(n),
+                                model=chain_solution(n))
+    assert fwd["total_bits"] == 0
+    assert r["max_bits"] > 0
+
+
+def test_reverse_order_blowup_is_doubly_exponential():
+    # Quantify the blow-up: max coefficient bit-length at least doubles
+    # roughly every step (a fixed-order, saturated normalisation would need
+    # exponentially many bits -- the motivation for the existential conjecture).
+    bits = [solution_compatible_L(chain(n), reverse_order(n),
+                                  model=chain_solution(n))["max_bits"]
+            for n in range(2, 9)]
+    # Strictly increasing and growing by a factor close to 2.
+    assert all(b2 > b1 for b1, b2 in zip(bits, bits[1:]))
+    assert bits[-1] >= 8 * bits[0]   # >= 3 doublings over 6 steps
+
+
+def test_reverse_blowup_is_representation_independent():
+    # The Section 14 blow-up is genuine, not a representation artifact: it
+    # survives BOTH canonical (HNF) reduction AND a shortest-basis (LLL)
+    # reduction.  So for the bad fixed order, no compact L exists at all --
+    # while the forward order needs an empty L.  This is the precise reason
+    # the compactness conjecture must be existential over orders.
+    lll_bits = []
+    for n in (4, 6, 8):
+        r = solution_compatible_L(chain(n), reverse_order(n),
+                                  model=chain_solution(n))
+        hnf = l_metrics_reduced(r["L"])["max_bits"]
+        lll = l_metrics_lll(r["L"])["max_bits"]
+        assert hnf > 0 and lll > 0
+        lll_bits.append(lll)
+    # LLL does not tame it: still grows (doubly exponential coefficients).
+    assert lll_bits[-1] > lll_bits[0]
+
+
+def test_doubling_chain_is_compact_despite_value_growth():
+    # x_{i+1}=2x_i forces values 2^i, and the HNF basis composes to x_n=2^n x_0
+    # (exponential coefficient) -- but the LLL short basis keeps the local
+    # relations (coefficient 2).  The honest node size is O(1) per relation.
+    for n in (1, 2):
+        r = existential_min_node_size(doubling_chain(n), norm_timeout_s=15)
+        assert r["status"] == "ok" and r["n_sat"] >= 1
+        assert r["min"]["max_abs"] <= 2        # LLL short basis: local relations
+        # HNF would inflate: confirm the LLL metric is no larger than HNF.
+        assert (l_metrics_lll(r["best_L"])["max_abs"]
+                <= max(1, l_metrics_reduced(r["best_L"])["max_abs"]))
+
+
+def test_reduce_L_lll_recovers_local_relations():
+    # The doubling lattice {x1=2x0, x2=2x1}: HNF echelon inflates to a basis
+    # containing x2=4x0; LLL recovers a short basis with coefficients <= 2.
+    L = ((2, -1, 0), (0, 2, -1))
+    assert l_metrics(reduce_L(L))["max_abs"] >= 1
+    assert l_metrics(reduce_L_lll(L))["max_abs"] <= 2
+
+
+# --------------------------------------------------------------------------
+# The cross gadget x|Ny, y|Nx: every order needs a non-empty, LLL-irreducible
+# stratum (x = N*y), of size exactly bit-length(N).  Non-empty for all orders,
+# yet compact (the forced coefficient equals the input coefficient -- no
+# amplification).  This is the closest "shape" to a counterexample found.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("N", [2, 4, 8, 16, 32])
+def test_cross_gadget_forces_logN_for_every_order(N):
+    sol = (N, 1)   # the ratio-N solution that forces x = N*y
+    r = min_node_size_over_orders(cross(N), sol, max_orders=24)
+    assert r["status"] == "ok"
+    assert r["n_increasing"] == r["n_orders"]          # every order repairable
+    # min-over-orders coefficient is exactly N (LLL-irreducible relation x=Ny);
+    # node size is bit-length(N) -- compact relative to the input coefficient.
+    assert r["min_L"]["max_abs"] == N
+    assert r["min_metric"] == N.bit_length()
+
+
+def test_cross_chain_does_not_amplify():
+    # Chaining factor-2 cross gadgets does NOT compound to an exponential
+    # node size: every order can use the local coefficient-2 relations, so the
+    # min-over-orders coefficient stays small and even the worst order grows
+    # only polynomially (contrast `chain`, which is doubly exponential on bad
+    # orders because its coupling squares).
+    worst = []
+    for n in range(1, 5):
+        sol = tuple(2 ** i for i in range(n + 1))
+        r = min_node_size_over_orders(cross_chain(n), sol, max_orders=720)
+        assert r["status"] == "ok"
+        assert r["min_L"]["max_abs"] <= 8        # stays small, no 2^n blow-up
+        worst.append(r["max_metric"])
+    # Worst-order node size grows at most linearly, not exponentially.
+    assert worst[-1] <= 2 * worst[0] + len(worst)
+
+
+# --------------------------------------------------------------------------
+# Redundancy vs. essential coefficients: the (a*x+1) gadget.  Its raw L has a
+# coefficient that scales with the input parameter a, but the REDUCED basis is
+# a single unit equality -- so the honest node size is O(1), compact.  This is
+# why the hunt must measure a reduced basis, and a reminder that a "growing"
+# raw coefficient is not by itself a counterexample.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("a", [3, 5, 8, 13, 21])
+def test_ax_plus_1_gadget_reduces_to_unit(a):
+    # (a*x+1) | y  and  (a*x+1) | ((a+1)*x + y), with x >= 1 forced.
+    lds = LinDivs(((a, 0, 1), (a, 0, 1)),
+                  ((0, 1, 0), (a + 1, 1, 0)),
+                  ineqconstrs=((-1, 0, 1),))
+    r = existential_min_node_size(lds, norm_timeout_s=10)
+    assert r["status"] == "ok" and r["n_sat"] >= 1
+    # Reduced node size is a single unit equality, independent of a.
+    assert r["min"]["max_abs"] <= 1
+    assert r["min"]["total_bits"] <= 1
+    # ...even though the raw accumulated L carries a coefficient ~ a.
+    assert r["min_raw"]["max_abs"] >= a - 1
+
+
+# --------------------------------------------------------------------------
+# Mixed-sign divisor LHS is now handled by positive-form normalisation
+# (used to raise AssertionError).  This unblocks the canonical "no good
+# order" construction chain_with_yz.
+# --------------------------------------------------------------------------
+
+def test_mixed_sign_lhs_now_normalized():
+    # (x - y) | z : the mixed-sign LHS is eliminated by the sign case-split
+    # and any residual sign-definite-negative LHS is flipped to positive, so
+    # the normaliser runs instead of asserting.
+    lds = LinDivs(((1, -1, 0, 0),), ((0, 0, 1, 0),))
+    r = existential_min_node_size(lds, norm_timeout_s=10)
+    assert not r["status"].startswith("exc:"), r["status"]
+
+
+def test_chain_with_yz_runs():
+    # chain_with_yz used to trip the mixed-sign precondition; it now
+    # normalises and both normalisers find it satisfiable (y=z=0, x_i=0).
+    from tests.test_norm_xval import chain_with_yz
+    for n in (1, 2):
+        lds = chain_with_yz(n)
+        with contextlib.redirect_stdout(io.StringIO()):
+            knf = lds.knf_norm(check_sym_inc=True, use_all_cx_inc=False)
+            lip = lds.norm(check_sym_inc=True, use_all_cx_inc=False)
+        assert len(knf) >= 1 and len(lip) >= 1
+
+
+def test_knf_terminates_under_check_sym_inc_false():
+    # Regression for the spurious-witness loop: before the Z-module-membership
+    # fix, knf_norm(check_sym_inc=False) looped forever on the chain (it had
+    # to explore bad orders).  It must now terminate.
+    with contextlib.redirect_stdout(io.StringIO()):
+        leaves = chain(1).knf_norm(check_sym_inc=False, use_all_cx_inc=False)
+    assert len(leaves) >= 1
+
+
+# --------------------------------------------------------------------------
+# Curated non-empty-stratum examples surfaced by the sign-definite random
+# hunt.  These are the smallest satisfiable systems we found whose increasing
+# stratum L is non-trivial; all stay compact (a few bits), the evidence the
+# hunt collected in favour of the compactness conjecture.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("F,G,max_abs,max_bits", [
+    # 2x+y | 2x+y+1  -- forces 2x+y to divide 1, i.e. a unit; L pins it.
+    (((2, 1, 0),), ((2, 1, 1),), 2, 4),
+    # 2x+1 | x+1
+    (((2, 0, 1),), ((1, 0, 1),), 2, 3),
+    # 2x | x+1
+    (((2, 0, 0),), ((1, 0, 1),), 1, 2),
+])
+def test_curated_compact_strata(F, G, max_abs, max_bits):
+    r = existential_min_node_size(LinDivs(F, G), norm_timeout_s=5)
+    assert r["status"] == "ok"
+    assert r["n_sat"] >= 1
+    assert r["min"]["ngen"] >= 1            # stratum is genuinely non-empty
+    assert r["min"]["max_abs"] <= max_abs
+    assert r["min"]["total_bits"] <= max_bits

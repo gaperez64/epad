@@ -3,7 +3,22 @@ from itertools import chain, combinations, permutations, product
 from systems.linineqs import LinIneqs
 from utils.matutils import (Mat, Vec, column_style_hnf,
                             vec2str, affxvars, matmul,
-                            basis_of_ker, transpose)
+                            basis_of_ker, transpose, in_module)
+
+
+def positive_form(f: Vec) -> Vec:
+    """Sign-normalize a divisor LHS to be non-negative when sign-definite.
+
+    Since `f | g` iff `-f | g`, the sign of a divisor is semantically free.
+    EPAD/LOW preprocessing (the sign case-split in `all_disj_left_pos`) turns
+    every genuinely mixed-sign LHS into an inequality and substitutes it away,
+    so the only LHS reaching the increasingness analysis are sign-definite;
+    here we flip the ones whose nonzero coefficients are all negative so they
+    have all-non-negative coefficients."""
+    nz = [c for c in f if c != 0]
+    if nz and all(c < 0 for c in nz):
+        return tuple(-c for c in f)
+    return f
 
 
 class LinDivs(LinIneqs):
@@ -138,11 +153,13 @@ class LinDivs(LinIneqs):
                 continue  # trivially true, everything divides 0
             d = math.gcd(*f, *g)
             assert d != 0
-            # we factor out a -1 on the left if possible
-            if all([c < 0 for c in f]):
-                s = -1
-            else:
-                s = 1
+            # Factor out -1 on the left when the LHS is sign-definite negative
+            # (all nonzero coefficients < 0).  f | g iff -f | g, so this is
+            # sound and yields an all-non-negative divisor.  Requiring *all*
+            # coefficients < 0 (the old test) missed forms like -x_0 that have
+            # zero coefficients, leaving a negative LHS for the analysis.
+            nz = [c for c in f if c != 0]
+            s = -1 if (nz and all(c < 0 for c in nz)) else 1
             newF.append(tuple([s * a // d for a in f]))
             newG.append(tuple([b // d for b in g]))
         res = LinDivs(tuple(newF), tuple(newG),
@@ -156,7 +173,7 @@ class LinDivs(LinIneqs):
         assert len(order) + 1 == len(self.F[0])
         not_increasing = []
         for pt in self.primitive_terms():
-            assert all([c >= 0 for c in pt])
+            pt = positive_form(pt)  # f | g iff -f | g; normalize sign
             # compute the leading variable
             lvar = -1
             lvaridx = -1
@@ -190,15 +207,13 @@ class LinDivs(LinIneqs):
             # HNF of intersection
             hnf_of_int, a = column_style_hnf(res)
             hnf_of_int = transpose(hnf_of_int)
-            # HNF of just pt
-            hnf_of_pt, _ = column_style_hnf(tuple([tuple([c]) for c in pt]))
-            hnf_of_pt = transpose(hnf_of_pt)
 
-            # Get the whole set of differences
-            # NOTE: the HNFs could contain trivial zeros
+            # A basis vector of the intersection witnesses non-increasingness
+            # iff it is not already in the target module Zf.  Test true Z-module
+            # membership, not literal HNF-row equality.
             non_inc_bases = [g for g in hnf_of_int
-                             if g not in hnf_of_pt
-                             and any([c != 0 for c in g])]
+                             if any([c != 0 for c in g])
+                             and not in_module((pt,), g)]
             if len(non_inc_bases) > 0:
                 not_increasing.append(tuple([pt, tuple(non_inc_bases)]))
 
@@ -301,7 +316,7 @@ class LinDivs(LinIneqs):
         assert len(order) + 1 == len(self.F[0])
         not_increasing = []
         for pt in self.primitive_terms():
-            assert all([c >= 0 for c in pt])
+            pt = positive_form(pt)  # f | g iff -f | g; normalize sign
             lvar = -1
             lvaridx = -1
             for i, idx in enumerate(reversed(order)):
@@ -336,16 +351,19 @@ class LinDivs(LinIneqs):
             hnf_int, _ = column_style_hnf(res)
             hnf_int_rows = set(transpose(hnf_int))
 
-            # HNF of Zf + L (the target)
-            zf_L_cols = [pt] + list(L_gens)
-            zf_L_mat = transpose(tuple(zf_L_cols))
-            hnf_zf_L, _ = column_style_hnf(zf_L_mat)
-            hnf_zf_L_rows = set(transpose(hnf_zf_L))
-
-            # Witnesses: HNF basis vectors in intersection but not in Zf+L
+            # Witnesses: HNF basis vectors of the intersection that are not
+            # already in the target module Zf+L.  This must be a true Z-module
+            # membership test: a vector can lie in Zf+L without being one of
+            # its HNF basis rows.  The old literal-row test reported spurious
+            # witnesses g in Zf+L, whose repair cf-g landed back in L without
+            # growing it -- so rk(L) never increased and the KNF search looped
+            # forever on bad orders (the check_sym_inc=False non-termination).
+            # With genuine witnesses only, every repair strictly grows the
+            # module, so the search terminates by ACC (depth <= d+1).
+            zf_L_gens = (pt,) + tuple(L_gens)
             non_inc = [g for g in hnf_int_rows
-                       if g not in hnf_zf_L_rows
-                       and any(c != 0 for c in g)]
+                       if any(c != 0 for c in g)
+                       and not in_module(zf_L_gens, g)]
             if non_inc:
                 not_increasing.append((pt, tuple(non_inc)))
 

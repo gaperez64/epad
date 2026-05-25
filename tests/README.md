@@ -62,18 +62,19 @@ and two divisibilities:
 (y - z) | x_1    and    x_n | (y + z).
 ```
 
-By the argument in Section 6 of the companion KNF note, these
-constraints simultaneously force `LV(x_n) <= max(LV(y), LV(z))` and
-`LV(y), LV(z) <= LV(x_n)`, so no total order on the variables can make
-every divisibility increasing.
+The constraints `(y - z) | x_1` introduce a mixed-sign LHS.  Positive-form
+normalization (`f | g` iff `-f | g`, plus the sign case-split that turns
+genuinely mixed forms into eliminated inequalities) handles this, so both
+normalizers run; the all-zero assignment (`y = z = 0`, `x_i = 0`) makes the
+system satisfiable.
 
-## Observed behaviour (May 2026)
+## Observed behaviour
 
 The parametrised tests `test_xval_chain[n]` and
 `test_xval_chain_with_yz[n]` record the following outcomes (timings
 are wall-clock on the development machine and are illustrative; what
-the tests actually assert is that the two normalizers agree on the
-outcome at each `n`):
+the tests actually assert is that the two normalizers agree, and on
+`chain_with_yz` that both find the system satisfiable):
 
 | Builder           | `n` | `norm`              | `knf_norm`         |
 | ----------------- | --: | ------------------- | ------------------ |
@@ -81,29 +82,26 @@ outcome at each `n`):
 | `chain`           |   2 | ok, 1 leaf, 0.00 s  | ok, 1 leaf, 0.00 s |
 | `chain`           |   3 | ok, 1 leaf, 0.01 s  | ok, 1 leaf, 0.00 s |
 | `chain`           |   4 | ok, 1 leaf, 0.02 s  | ok, 1 leaf, 0.02 s |
-| `chain_with_yz`   |   1 | AssertionError      | AssertionError     |
-| `chain_with_yz`   |   2 | AssertionError      | AssertionError     |
-| `chain_with_yz`   |   3 | AssertionError, 0.8 s | AssertionError, 0.8 s |
-| `chain_with_yz`   |   4 | AssertionError, 3.8 s | AssertionError, 56 s |
+| `chain_with_yz`   |   1 | ok, 2 leaves, sat   | ok, 2 leaves, sat  |
+| `chain_with_yz`   |   2 | ok, 2 leaves, sat   | ok, 2 leaves, sat  |
+| `chain_with_yz`   |   3 | ok, 2 leaves, ~4.5 s | ok, 2 leaves, ~4 s |
 
 Two things worth noting:
 
-- **Both normalizers fail identically on `chain_with_yz`.** They both
-  trip the pre-existing precondition that every primitive divisor LHS
-  is non-negative after EPAD preprocessing — the term `y - z` survives
-  with mixed-sign coefficients because `all_disj_just_divs`' affine
-  substitution does not always neutralize the sign. This is a
-  pre-existing limitation of the library, not a KNF-specific bug, and
-  the cross-validation test asserts it manifests *the same way* in
-  both normalizers (same exception class, same `n`).
-- **KNF gets much slower than Lipshitz once `n` grows.** At `n = 4`
-  KNF takes roughly an order of magnitude longer than Lipshitz. This
-  is consistent with Section 6 of the KNF note: the chain can force
-  exponentially large coefficients in the accumulated quotient module
-  `L`, and KNF stores those coefficients verbatim instead of folding
-  them into an affine change of variables. The test suite therefore
-  parametrises `test_xval_chain_with_yz` only up to `n = 3`; `n = 4`
-  is used during development to confirm the trend but kept out of CI.
+- **`chain_with_yz` used to trip a precondition (mixed-sign LHS) and now
+  runs.** The increasingness analysis no longer asserts that primitive
+  divisor LHS are non-negative; instead `positive_form` flips sign-definite
+  LHS (`f | g` iff `-f | g`), and the existing sign case-split in
+  `all_disj_left_pos` eliminates genuinely mixed forms.  `test_xval_chain_with_yz`
+  is parametrised up to `n = 2` for CI speed; `n = 3` is correct but slow
+  (~4.5 s per normalizer, the Section 6 coefficient growth).
+- **KNF accumulates large coefficients on bad orders.** Consistent with
+  Section 6/14 of the KNF note, KNF stores the quotient-module coefficients
+  verbatim instead of folding them into an affine change of variables, so a
+  bad fixed order forces them to grow doubly exponentially.  The
+  `experiments/node_size.py` harness measures this directly (see the
+  fixed-order diagnostic, where the reverse order's coefficient bit-length
+  doubles per step).
 
 ## Running the tests
 

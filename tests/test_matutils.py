@@ -1,4 +1,5 @@
-from utils.matutils import affxvars, column_style_hnf, basis_of_ker
+from utils.matutils import (affxvars, column_style_hnf, basis_of_ker,
+                            in_module, matmul)
 import flint
 
 
@@ -40,3 +41,26 @@ class TestMatutils:
                tuple([0, 0, 1])]
         ex = tuple(exl)
         assert B == ex
+
+    def test_in_module(self):
+        # Module spanned by (6,-1,0): exactly the integer multiples.
+        gens = ((6, -1, 0),)
+        assert in_module(gens, (6, -1, 0)) is True
+        assert in_module(gens, (12, -2, 0)) is True      # 2*(6,-1,0)
+        assert in_module(gens, (0, 0, 0)) is True        # zero always in
+        assert in_module(gens, (6, 1, 0)) is False
+        assert in_module(gens, (1, 0, 0)) is False
+        # The spurious-witness case that made KNF loop: g=(6,1,12) is in
+        # Zf+L for f=(1,0,1), L=⟨(6,-1,0)⟩, even though it is not an HNF row.
+        zf_L = ((1, 0, 1), (6, -1, 0))
+        assert in_module(zf_L, (6, 1, 12)) is True
+        assert in_module(zf_L, (0, 2, 12)) is True
+        # Empty module contains only the zero vector.
+        assert in_module((), (0, 0)) is True
+        assert in_module((), (1, 0)) is False
+
+    def test_matmul_bignum(self):
+        # Object dtype: must not overflow int64 (KNF accumulates huge coeffs).
+        big = 10 ** 40
+        r = matmul(((big, 0), (0, big)), ((1,), (1,)))
+        assert r == ((big,), (big,))
