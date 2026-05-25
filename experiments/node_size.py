@@ -345,7 +345,98 @@ def solution_compatible_L(lds: LinDivs, order, *, positive=True,
     return {"status": "max_steps_exceeded", "steps": max_steps, "L": L}
 
 
-from itertools import permutations  # noqa: E402
+from itertools import permutations, combinations, product as _product  # noqa: E402
+
+
+def _is_increasing(sub: LinDivs, order, L_gens) -> bool:
+    with contextlib.redirect_stdout(io.StringIO()):
+        return len(sub.all_non_increasing_knf(order, L_gens)) == 0
+
+
+def _phi_and_L_sat(sub: LinDivs, L_gens, z3_timeout_ms=500) -> Optional[bool]:
+    d = len(sub.F[0]) - 1
+    xs = [z3.Int(f"x{i}") for i in range(d)]
+    s = _solver_for(sub.F, sub.G, L_gens, xs, positive=False, tag="cert")
+    s.set("timeout", z3_timeout_ms)
+    r = s.check()
+    return True if r == z3.sat else (False if r == z3.unsat else None)
+
+
+def _candidate_relations(d, max_coef):
+    """Primitive (d+1)-vectors with |coef| <= max_coef, nonzero linear part,
+    in canonical sign (first nonzero coefficient positive)."""
+    import math as _m
+    rng = range(-max_coef, max_coef + 1)
+    seen = set()
+    out = []
+    for tail in _product(rng, repeat=d + 1):
+        if not any(tail[:d]):           # need a nonzero variable coefficient
+            continue
+        g = 0
+        for c in tail:
+            g = _m.gcd(g, c)
+        if g != 1:                       # primitive only
+            continue
+        # canonical sign: first nonzero positive
+        fnz = next(c for c in tail if c != 0)
+        v = tail if fnz > 0 else tuple(-c for c in tail)
+        if v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
+def smallest_certificate(lds: LinDivs, *, max_coef=2, max_gens=3,
+                         z3_timeout_ms=500):
+    """Search for the SMALLEST equality module L (any low-coefficient L, not
+    just the ones knf_norm happens to generate) such that some order is
+    quotient-increasing for (Phi, L) AND Phi ∧ L is satisfiable.
+
+    This is the honest compact-stratum quantity of Problem 16.1: existence of
+    *any* small L, over all orders and all solution regions.  knf_norm's L is
+    only an upper bound (e.g. it reports x=N*y for cross(N) while x=y works);
+    this search finds the true minimum within the coefficient/size budget.
+
+    Requires `lds` to be a pure-divisibility, sign-definite system (no eqs or
+    ineqs) so that `lds` itself is the increasingness subsystem.
+
+    Returns: status ('ok'/'none_within_budget'), L, ngen, l_metrics of the
+    smallest certificate, and the witnessing order.
+    """
+    assert not lds.get_eqs() and not lds.get_ineqs()
+    d = len(lds.F[0]) - 1
+    orders = list(permutations(range(d)))
+
+    # k = 0: is Phi already increasing for some order with empty L?
+    if _phi_and_L_sat(lds, (), z3_timeout_ms):
+        for order in orders:
+            if _is_increasing(lds, order, ()):
+                return {"status": "ok", "L": (), "ngen": 0,
+                        "metrics": l_metrics(()), "order": order}
+
+    cands = _candidate_relations(d, max_coef)
+    for k in range(1, max_gens + 1):
+        best = None
+        for combo in combinations(cands, k):
+            L = tuple(combo)
+            if _phi_and_L_sat(lds, L, z3_timeout_ms) is not True:
+                continue
+            ok_order = None
+            for order in orders:
+                if _is_increasing(lds, order, L):
+                    ok_order = order
+                    break
+            if ok_order is None:
+                continue
+            m = l_metrics_lll(L)
+            key = (m["total_bits"], m["max_abs"])
+            if best is None or key < best[0]:
+                best = (key, L, m, ok_order)
+        if best is not None:
+            return {"status": "ok", "L": best[1], "ngen": k,
+                    "metrics": best[2], "order": best[3]}
+    return {"status": "none_within_budget",
+            "max_coef": max_coef, "max_gens": max_gens}
 
 
 def min_node_size_over_orders(lds: LinDivs, solution, *, max_orders=5040,
