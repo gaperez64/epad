@@ -2,6 +2,12 @@ name: tests
 
 on: [push]
 
+# Force JS actions (incl. transitive ones like github-script inside
+# codecov-action) onto the Node.js 24 runtime, clearing the Node 20
+# deprecation warning until those actions update upstream.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
 
