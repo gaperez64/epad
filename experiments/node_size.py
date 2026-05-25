@@ -439,6 +439,63 @@ def smallest_certificate(lds: LinDivs, *, max_coef=2, max_gens=3,
             "max_coef": max_coef, "max_gens": max_gens}
 
 
+# --------------------------------------------------------------------------
+# Repair-mechanism classification.
+#
+# Conjecture (four-mechanism repair completeness): every satisfiable non-KNF
+# kernel state (Phi, L, chi) has a poly-size satisfiability-preserving repair
+# r not in L produced by one of:
+#   (1) acyclic scheduling / filtered DAG acceptance  -- a good order exists
+#       at the current L, so LV(f) is *defined* by lower variables (the repair
+#       is a reorder; no new relation is forced);
+#   (2) homogeneous zero collapse                     -- r = (x_i = 0);
+#   (3) local cycle / cross-component relation         -- r = p_i = c*p_j
+#       (an affine 2-component relation, constant allowed by positive branch);
+#   (4) finite-gcd pin f = d from lower cancellation f|C -- r = (c*x_i = d).
+#
+# `classify_repair_generator` labels a single reduced relation; a repair with
+# >= 3 nonzero variable coefficients is a candidate FIFTH mechanism (none has
+# been found: such "definitions" of LV(f) by lower variables are absorbed by
+# mechanism 1 -- they make some order increasing, so L comes back empty).
+# --------------------------------------------------------------------------
+
+def classify_repair_generator(v) -> str:
+    """Classify one (reduced) repair relation vector against the four
+    mechanisms; return 'FIFTH(nvars=k)' for a genuinely >=3-variable relation
+    that fits none of them."""
+    nvar = sum(1 for c in v[:-1] if c != 0)
+    has_const = v[-1] != 0
+    if nvar == 0:
+        return "trivial"                       # pure-constant (degenerate)
+    if nvar == 1 and not has_const:
+        return "M2:zero-collapse"              # x_i = 0
+    if nvar == 1 and has_const:
+        return "M4:gcd-pin"                    # c*x_i = d  ->  x_i = d/c
+    if nvar == 2:
+        return "M3:2-comp" + ("(affine)" if has_const else "")
+    return f"FIFTH(nvars={nvar})"
+
+
+def classify_node_repair(lds: LinDivs, *, norm_timeout_s=10,
+                         z3_timeout_ms=500) -> dict:
+    """Run the existential measurement and classify the minimal repair of the
+    resulting kernel state against the four mechanisms.
+
+    Returns: status, classes (list of per-generator labels), and `fifth`
+    (True if any generator is a genuine >=3-variable relation outside the
+    taxonomy).  An empty stratum is mechanism 1 (acyclic reschedule)."""
+    r = existential_min_node_size(lds, norm_timeout_s=norm_timeout_s,
+                                  z3_timeout_ms=z3_timeout_ms)
+    if r["status"] != "ok":
+        return {"status": r["status"], "classes": None, "fifth": False}
+    L = reduce_L_lll(r["best_L"])
+    if not L:
+        return {"status": "ok", "classes": ["M1:reschedule"], "fifth": False}
+    classes = [classify_repair_generator(v) for v in L]
+    return {"status": "ok", "classes": classes,
+            "fifth": any(c.startswith("FIFTH") for c in classes)}
+
+
 def min_node_size_over_orders(lds: LinDivs, solution, *, max_orders=5040,
                               metric="max_bits") -> dict:
     """The rigorous existential node-size of a *sign-definite* satisfiable

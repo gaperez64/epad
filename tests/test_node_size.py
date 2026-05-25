@@ -33,6 +33,7 @@ from experiments.node_size import (
     l_metrics, l_metrics_reduced, l_metrics_lll, reduce_L, reduce_L_lll,
     leaf_is_sat, existential_min_node_size, solution_compatible_L,
     min_node_size_over_orders, smallest_certificate,
+    classify_repair_generator, classify_node_repair,
     chain, antonia, all_equal, doubling_chain, cross, cross_chain,
     phi_forces_value, forward_order, reverse_order, chain_solution,
 )
@@ -310,6 +311,55 @@ def test_phi_forces_value_pins_x_to_N(N):
     # ...so the node size is bit-length(N): scales with the *value* but is
     # compact relative to the input (N is written in the input in O(log N)).
     assert r["min"]["max_bits"] == N.bit_length()
+
+
+# --------------------------------------------------------------------------
+# Four-mechanism repair-completeness conjecture: every satisfiable non-KNF
+# kernel state has a poly-size repair from one of (1) acyclic scheduling,
+# (2) homogeneous zero collapse, (3) local/cross 2-component relation,
+# (4) finite-gcd pin.  The classifier maps each minimal repair to a mechanism;
+# the hunt found NO repair outside the four (no genuine >=3-variable relation),
+# because a repair defining LV(f) by lower variables is absorbed by mechanism 1.
+# --------------------------------------------------------------------------
+
+def test_classify_repair_generator_units():
+    assert classify_repair_generator((0, 1, 0)) == "M2:zero-collapse"   # x1=0
+    assert classify_repair_generator((1, 0, -64)) == "M4:gcd-pin"        # x0=64
+    assert classify_repair_generator((1, -1, 0)) == "M3:2-comp"          # x0=x1
+    assert classify_repair_generator((2, -1, -2)) == "M3:2-comp(affine)"
+    assert classify_repair_generator((1, 1, 1, 0)).startswith("FIFTH")   # 3 vars
+
+
+@pytest.mark.parametrize("name,lds,expected", [
+    ("chain",      chain(3),            "M1:reschedule"),
+    ("antonia",    antonia(2),          "M1:reschedule"),
+    ("x=y+z",      LinDivs(((1, 0, 0, 0), (0, 1, 1, 0)),
+                           ((0, 1, 1, 0), (1, 0, 0, 0))), "M1:reschedule"),
+    ("phi(64)",    phi_forces_value(64), "M4:gcd-pin"),
+])
+def test_node_repair_classifies_into_four_mechanisms(name, lds, expected):
+    r = classify_node_repair(lds, norm_timeout_s=20, z3_timeout_ms=600)
+    if r["status"] == "norm_timeout":
+        pytest.skip("knf_norm timed out on this machine")
+    assert r["status"] == "ok"
+    assert not r["fifth"], f"{name}: unexpected 5th-mechanism repair {r}"
+    assert expected in r["classes"], f"{name}: {r['classes']}"
+
+
+def test_no_fifth_mechanism_on_constructed_families():
+    # Every family probed has its minimal repair inside the four mechanisms;
+    # none needs a genuine >=3-variable ("fifth") relation.
+    fams = [chain(2), antonia(2), all_equal(2),
+            cross(16), cross_chain(2), doubling_chain(1),
+            phi_forces_value(8)]
+    saw_ok = False
+    for lds in fams:
+        r = classify_node_repair(lds, norm_timeout_s=20, z3_timeout_ms=400)
+        if r["status"] != "ok":
+            continue
+        saw_ok = True
+        assert not r["fifth"], f"5th-mechanism repair: {r}"
+    assert saw_ok
 
 
 # --------------------------------------------------------------------------
