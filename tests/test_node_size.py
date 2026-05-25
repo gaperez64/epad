@@ -34,7 +34,7 @@ from experiments.node_size import (
     leaf_is_sat, existential_min_node_size, solution_compatible_L,
     min_node_size_over_orders, smallest_certificate,
     chain, antonia, all_equal, doubling_chain, cross, cross_chain,
-    forward_order, reverse_order, chain_solution,
+    phi_forces_value, forward_order, reverse_order, chain_solution,
 )
 
 
@@ -277,6 +277,39 @@ def test_knf_terminates_under_check_sym_inc_false():
     with contextlib.redirect_stdout(io.StringIO()):
         leaves = chain(1).knf_norm(check_sym_inc=False, use_all_cx_inc=False)
     assert len(leaves) >= 1
+
+
+# --------------------------------------------------------------------------
+# Constant (variable-free) divisor handling, via Barros' gadget
+# phi_forces_value(N) = (x|y) ∧ (x|y+N) ∧ (N|x), which forces x = N.
+# The N|x divisor is a constant divisor (no leading variable); it used to trip
+# `assert lvar >= 0`.  It is now skipped in the increasingness check (it is a
+# pure congruence), so the gadget normalises.  It also defeats two escapes
+# (no good order, no all-zero collapse), leaving the small-solution pin
+# {x = N} whose node size is bit-length(N) -- compact, since N is input.
+# --------------------------------------------------------------------------
+
+def test_constant_divisor_does_not_assert():
+    # Bare regression for the constant-divisor fix.
+    lds = phi_forces_value(2)
+    r = existential_min_node_size(lds, norm_timeout_s=15)
+    _require_ok(r)
+
+
+@pytest.mark.parametrize("N", [2, 4, 8, 64, 256])
+def test_phi_forces_value_pins_x_to_N(N):
+    r = existential_min_node_size(phi_forces_value(N), norm_timeout_s=20,
+                                  z3_timeout_ms=800)
+    _require_ok(r)
+    assert r["n_sat"] >= 1
+    # No good order (x|N puts the constant N in M_x) and no all-zero collapse
+    # (0 ∤ N): the only certificate is the pin {x = N}, an LLL-irreducible
+    # single relation of coefficient exactly N.
+    assert r["min"]["ngen"] == 1
+    assert r["min"]["max_abs"] == N
+    # ...so the node size is bit-length(N): scales with the *value* but is
+    # compact relative to the input (N is written in the input in O(log N)).
+    assert r["min"]["max_bits"] == N.bit_length()
 
 
 # --------------------------------------------------------------------------

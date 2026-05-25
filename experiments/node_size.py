@@ -532,6 +532,27 @@ def chain_solution(n: int):
     return tuple(a)
 
 
+def phi_forces_value(N: int) -> LinDivs:
+    """Barros' gadget  (x | y) and (x | y+N) and (N | x), which forces x = N.
+
+    x|y and x|(y+N) give x|N, and N|x gives the reverse, so the positive
+    branch pins x = N (the smallest nontrivial solution is (x,y)=(N,0)).
+
+    It defeats TWO of the compactness escapes simultaneously:
+      * no good order with empty L -- x|N puts the constant N in M_x, so x is
+        non-increasing for every order;
+      * no all-zero collapse -- x=0 is infeasible (0 does not divide N).
+    The only remaining escape is the small-solution pin {x = N}, an
+    LLL-irreducible relation of size bit-length(N).  Since N is an input
+    constant the node size is O(input size) -- compact, not a counterexample,
+    but the cleanest illustration of the binding escape.
+
+    Note: contains the constant (variable-free) divisor N|x, exercising the
+    constant-divisor handling in the increasingness check."""
+    return LinDivs(divisors=((1, 0, 0), (1, 0, 0), (0, 0, N)),
+                   dividends=((0, 1, 0), (0, 1, N), (1, 0, 0)))
+
+
 def doubling_chain(n: int) -> LinDivs:
     """x_{i+1} = 2*x_i exactly, via 2*x_i | x_{i+1} and x_{i+1} | 2*x_i, with
     x_0 >= 1 forced.  Solutions grow as x_i = 2^i*x_0 (single exponential), yet

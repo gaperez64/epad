@@ -174,6 +174,13 @@ class LinDivs(LinIneqs):
         not_increasing = []
         for pt in self.primitive_terms():
             pt = positive_form(pt)  # f | g iff -f | g; normalize sign
+            if all(c == 0 for c in pt[:-1]):
+                # Constant (variable-free) divisor c | g: a pure congruence
+                # with no leading variable, so it imposes no increasingness
+                # condition.  Its transfer is still included in
+                # basis_of_divmodule for the variable divisors; satisfiability
+                # of the congruence is checked separately (z3).
+                continue
             # compute the leading variable
             lvar = -1
             lvaridx = -1
@@ -317,6 +324,12 @@ class LinDivs(LinIneqs):
         not_increasing = []
         for pt in self.primitive_terms():
             pt = positive_form(pt)  # f | g iff -f | g; normalize sign
+            if all(c == 0 for c in pt[:-1]):
+                # Constant (variable-free) divisor: a pure congruence with no
+                # leading variable, hence no increasingness condition.  Its
+                # transfer is still included in basis_of_divmodule_knf; the
+                # congruence's satisfiability is checked separately (z3).
+                continue
             lvar = -1
             lvaridx = -1
             for i, idx in enumerate(reversed(order)):
