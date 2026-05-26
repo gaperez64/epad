@@ -36,6 +36,7 @@ from experiments.node_size import (
     classify_repair_generator, classify_node_repair,
     chain, antonia, all_equal, doubling_chain, cross, cross_chain,
     phi_forces_value, forward_order, reverse_order, chain_solution,
+    twist_chain, cyclic_chain, amp_loose_cycle,
 )
 
 
@@ -425,3 +426,86 @@ def test_cross_certificate_beats_knf_upper_bound():
     # knf overestimates (coefficient ~N); the true certificate is unit.
     assert knf["min"]["max_abs"] >= N // 2
     assert cert["metrics"]["max_abs"] <= 1
+
+
+# --------------------------------------------------------------------------
+# Twisted-chain hunt.  Two ways to attack the compact-stratum conjecture were
+# tried and both stay compact:
+#   * symmetric divisors (s-t, s+t) instead of the coprime pair (x, x+1) --
+#     the twist carries no forced coprimality, so it never amplifies and the
+#     existential stratum is EMPTY (mechanism 1);
+#   * closing the (genuinely amplifying) chain into a cycle -- a hard closure
+#     collapses to the fixed point x=0 (mechanism 2); a loose closure pins the
+#     boundary variable to a constant (mechanism 4).  In the loose case the
+#     doubly-exp recurrence appears ONLY in the worst order, never the minimum.
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("n", [1, 2])
+def test_twist_chain_has_empty_existential_stratum(n):
+    # The symmetric difference/sum pair lacks the chain's automatic
+    # coprimality, so the system has slack and a good order with empty L always
+    # exists -- the twist alone does not amplify (mechanism 1: reschedule).
+    r = existential_min_node_size(twist_chain(n), norm_timeout_s=30)
+    _require_ok(r)
+    assert r["n_sat"] >= 1
+    assert r["min"]["total_bits"] == 0
+    c = classify_node_repair(twist_chain(n), norm_timeout_s=30)
+    if c["status"] == "ok":
+        assert c["classes"] == ["M1:reschedule"]
+        assert not c["fifth"]
+
+
+@pytest.mark.parametrize("close_both", [True, False])
+def test_cyclic_chain_collapses_to_zero(close_both):
+    # Closing the amplifier into a directed divisibility cycle forces all x_i
+    # equal, then (x_i+1)|x_i forces x_i=0: the cycle CANNOT hold positive
+    # values.  The existential stratum is the unit zero-collapse relations
+    # (mechanism 2).  n=1 only -- n>=2 branch-explodes in knf_norm.
+    lds = cyclic_chain(1, close_both=close_both)
+    r = existential_min_node_size(lds, norm_timeout_s=30, z3_timeout_ms=1500)
+    _require_ok(r)
+    assert r["n_sat"] >= 1
+    assert r["min"]["max_abs"] <= 1          # unit zero-collapse, no blow-up
+    c = classify_node_repair(lds, norm_timeout_s=30, z3_timeout_ms=1500)
+    if c["status"] == "ok":
+        assert not c["fifth"]
+        assert all(cl == "M2:zero-collapse" for cl in c["classes"]), c["classes"]
+
+
+@pytest.mark.parametrize("n", [1, 2, 3, 4])
+def test_amp_loose_cycle_forward_pins_x0_to_constant(n):
+    # The loose closure x_0|(x_n+1) together with x_0|x_n (forward transitivity)
+    # forces x_0 | gcd(x_n, x_n+1) = 1, i.e. x_0 = 1: an M4 finite-gcd pin of
+    # size O(1).  The forward-order forced repair is exactly that single
+    # constant-pin relation (1,0,...,0,-1).
+    r = solution_compatible_L(amp_loose_cycle(n, 1), forward_order(n),
+                              model=chain_solution(n))
+    assert r["status"] == "increasing"
+    basis = reduce_L_lll(r["L"])
+    assert len(basis) == 1
+    v = basis[0]
+    assert classify_repair_generator(v) == "M4:gcd-pin"
+    # the pin is x_0 = 1: unit variable coefficient, constant -1
+    assert abs(v[0]) == 1 and abs(v[-1]) == 1
+    assert all(c == 0 for c in v[1:-1])
+
+
+def test_amp_loose_cycle_recurrence_only_in_worst_order():
+    # The key Version-C result: the cycle removes the globally good order, but
+    # the EXISTENTIAL minimum node size stays O(1) (the forward x_0=1 pin) for
+    # every n, while only the WORST order inherits the chain's doubly-exp
+    # coefficients.  So the recurrence lands in the worst order, never the
+    # minimum -- consistent with the compact-stratum conjecture.
+    worst = []
+    for n in (2, 3, 4):
+        sol = chain_solution(n)
+        r = min_node_size_over_orders(amp_loose_cycle(n, 1), sol,
+                                      metric="max_bits")
+        assert r["status"] == "ok"
+        assert r["n_increasing"] == r["n_orders"]   # every order repairable
+        assert r["min_metric"] == 1                 # existential min: O(1) pin
+        assert r["max_metric"] > r["min_metric"]    # worst order amplifies
+        worst.append(r["max_metric"])
+    # Worst-order node size grows with n (the doubly-exp recurrence), while the
+    # minimum stayed pinned at 1 above.
+    assert worst[0] < worst[1] < worst[2]

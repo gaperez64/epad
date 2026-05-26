@@ -720,6 +720,124 @@ def antonia(n: int) -> LinDivs:
 
 
 # --------------------------------------------------------------------------
+# "Twisted chain" families (the symmetric-divisor / cyclic-amplifier hunt).
+#
+# Motivation: `chain` amplifies (x_{i+1} >= x_i(x_i+1)) only because the two
+# divisors x_i and x_i+1 are CONSECUTIVE INTEGERS, hence automatically coprime,
+# so their product is forced.  The hunt asked whether a "twisted" amplifier --
+# replacing the coprime pair (x, x+1) by a symmetric difference/sum (s-t, s+t),
+# or closing the amplifier into a cycle -- can force a doubly-exponential repair
+# into the EXISTENTIAL minimum (not just a bad order), which would break the
+# compact-stratum conjecture.  It cannot, for two structural reasons the
+# families below make measurable.
+# --------------------------------------------------------------------------
+
+def twist_chain(n: int) -> LinDivs:
+    """Symmetric-divisor twist of the chain (the 'Version A' control):
+
+        (s_i - t_i) | p_i   and   p_{i+1} | (s_i + t_i),    i = 0,...,n-1,
+
+    over p_0,...,p_n and per-block phases s_i,t_i.  The point is the NEGATIVE
+    result: unlike (x, x+1), the difference/sum pair carries no forced
+    coprimality, so the system has slack (set s_i=t_i, everything 0).  The
+    existential stratum is therefore EMPTY for every n -- the normalizer always
+    finds a sign-branch with a topological order (mechanism 1).  The twist alone
+    does not amplify; it is the cyclic closure (below), not the symmetry, that
+    removes the good order."""
+    nvars = (n + 1) + 2 * n
+
+    def vec(pairs, const=0):
+        v = [0] * (nvars + 1)
+        for idx, c in pairs:
+            v[idx] = c
+        v[-1] = const
+        return tuple(v)
+
+    def P(i):  # noqa: E306
+        return i
+
+    def S(i):
+        return (n + 1) + 2 * i
+
+    def T(i):
+        return (n + 1) + 2 * i + 1
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(S(i), 1), (T(i), -1)]))   # s_i - t_i
+        G.append(vec([(P(i), 1)]))               # | p_i
+        F.append(vec([(P(i + 1), 1)]))           # p_{i+1}
+        G.append(vec([(S(i), 1), (T(i), 1)]))    # | s_i + t_i
+    return LinDivs(tuple(F), tuple(G))
+
+
+def cyclic_chain(n: int, close_both: bool = True) -> LinDivs:
+    """The amplifying chain closed into a CYCLE (the 'Version C' hard closure):
+    forward x_i|x_{i+1}, (x_i+1)|x_{i+1} for i<n, plus a closing edge x_n|x_0
+    (and (x_n+1)|x_0 when close_both).
+
+    A directed divisibility cycle x_0|x_1|...|x_n|x_0 makes all x_i associates,
+    hence equal over the naturals; then (x_i+1)|x_i forces x_i=0.  So a cyclic
+    amplifier cannot hold positive values -- it COLLAPSES to the fixed point
+    x_i=0, and the existential stratum is the unit zero-collapse relations
+    {x_i = 0} (mechanism 2).  Compact: the recurrence never appears.
+
+    (For n>=2 knf_norm branch-explodes on the c in {-S..S} disjunction and
+    times out, but z3 certifies the same all-zero collapse semantically.)"""
+    nv = n + 1
+
+    def vec(pairs, const=0):
+        v = [0] * (nv + 1)
+        for idx, c in pairs:
+            v[idx] = c
+        v[-1] = const
+        return tuple(v)
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(i, 1)]));        G.append(vec([(i + 1, 1)]))
+        F.append(vec([(i, 1)], 1));     G.append(vec([(i + 1, 1)]))
+    F.append(vec([(n, 1)]));            G.append(vec([(0, 1)]))     # x_n | x_0
+    if close_both:
+        F.append(vec([(n, 1)], 1));     G.append(vec([(0, 1)]))     # (x_n+1)|x_0
+    return LinDivs(tuple(F), tuple(G))
+
+
+def amp_loose_cycle(n: int, k: int = 1) -> LinDivs:
+    """The amplifying chain with a LOOSE cyclic closure (the 'Version C' case
+    designed to avoid collapse): forward x_i|x_{i+1}, (x_i+1)|x_{i+1}, plus
+    x_0 | (x_n + k).
+
+    Because x_0 (small) divides the huge x_n+k, the system stays SATISFIABLE
+    (no all-equal/zero collapse) along the chain solution x_0=1,
+    x_{i+1}=x_i(x_i+1).  Yet the closing edge introduces x_n above x_0, so it is
+    non-increasing in the forward order: x_0|x_n (forward transitivity) and
+    x_0|(x_n+k) give x_0 | gcd(x_n, x_n+k), which for k=1 forces x_0 = 1 -- an
+    M4 finite-gcd constant-pin (mechanism 4), of size O(1).
+
+    This is the key Version-C measurement: the cycle removes the *globally*
+    good order, but the EXISTENTIAL minimum node size stays O(1) (the forward
+    order's x_0=1 pin), while only the WORST order inherits the chain's
+    doubly-exponential coefficients.  The recurrence lands in the worst order,
+    never in the minimum -- consistent with the compact-stratum conjecture."""
+    nv = n + 1
+
+    def vec(pairs, const=0):
+        v = [0] * (nv + 1)
+        for idx, c in pairs:
+            v[idx] = c
+        v[-1] = const
+        return tuple(v)
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(i, 1)]));        G.append(vec([(i + 1, 1)]))
+        F.append(vec([(i, 1)], 1));     G.append(vec([(i + 1, 1)]))
+    F.append(vec([(0, 1)]));            G.append(vec([(n, 1)], k))  # x_0|(x_n+k)
+    return LinDivs(tuple(F), tuple(G))
+
+
+# --------------------------------------------------------------------------
 # Batch counterexample hunt.
 # --------------------------------------------------------------------------
 
