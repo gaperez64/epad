@@ -1,3 +1,6 @@
+import contextlib
+import io
+
 from systems.linineqs import LinIneqs
 from systems.lindivs import LinDivs
 
@@ -117,3 +120,45 @@ class TestLinDivs:
                       tuple([(0, 1, -2), (1, 1, 0)]))
         neqs = lds.all_non_increasing(order)
         assert 0 < len(neqs)
+
+    def test_norm_handles_empty_kernel_basis(self):
+        # Regression: the "repair cascade" family on (x_1,...,x_n,y),
+        #   y | 3 x_n   and   (x_k + x_{k-1}) | y   for k = 2..n
+        # triggers an empty kernel basis inside
+        # LinDivs.all_non_increasing on Phi_3.  Prior to the fix,
+        # basis_of_ker returned a bare () with no shape, and
+        # matmul(basis_of_mod, ker) hit `assert len(M[0]) == len(N)`
+        # before any leaves could be produced.  This test pins the
+        # repaired behaviour: .norm() must terminate without an
+        # AssertionError and produce at least one leaf.
+
+        def repair_cascade(n: int) -> LinDivs:
+            assert n >= 2
+            veclen = (n + 1) + 1
+
+            def vec(pairs, const=0):
+                v = [0] * veclen
+                for i, c in pairs:
+                    v[i] = c
+                v[-1] = const
+                return tuple(v)
+
+            F, G = [], []
+            F.append(vec([(n, 1)]))            # y
+            G.append(vec([(n - 1, 3)]))        # 3 x_n
+            for k in range(2, n + 1):
+                F.append(vec([(k - 1, 1), (k - 2, 1)]))  # x_k + x_{k-1}
+                G.append(vec([(n, 1)]))                  # y
+            return LinDivs(tuple(F), tuple(G))
+
+        for n in (2, 3):
+            lds = repair_cascade(n)
+            # The bug manifests as AssertionError inside matmul.  Both
+            # branching policies must succeed; we silence the per-call
+            # trace log so the test output stays clean.
+            sink = io.StringIO()
+            with contextlib.redirect_stdout(sink):
+                leaves = lds.norm(check_sym_inc=True,
+                                  use_all_cx_inc=False)
+            assert len(leaves) > 0, (
+                f"Phi_{n}.norm() returned no leaves")

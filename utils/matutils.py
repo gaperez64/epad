@@ -97,6 +97,16 @@ def in_module(gens: Mat, v: Vec) -> bool:
 def basis_of_ker(M: Mat) -> Mat:
     A = flint.fmpz_mat(M)
     X, nullity = A.nullspace()
+    if nullity == 0:
+        # Shape-preserving empty result.  The kernel of M is a subspace of
+        # Z^cols(M); when it is the trivial {0} subspace we still return one
+        # (empty) row per column of M so callers can rely on
+        # len(basis_of_ker(M)) == cols(M).  Returning a bare () here breaks
+        # downstream matmul(basis_of_mod, ker_of_extended) in
+        # LinDivs.all_non_increasing, which truncates ker_of_extended to
+        # len(basis_of_mod[0]) rows and then asserts that count.
+        cols = len(M[0]) if M else 0
+        return tuple([()] * cols)
     B = tuple([tuple(r[:nullity]) for i, r in enumerate(X.tolist())])
     # NOTE: the basis is not necessarily minimal, i.e. some columns may have
     # nontrivial GCD! so we have to do an extra step to output a reduced basis

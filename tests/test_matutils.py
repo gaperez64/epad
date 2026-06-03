@@ -42,6 +42,33 @@ class TestMatutils:
         ex = tuple(exl)
         assert B == ex
 
+    def test_basis_of_ker_empty_kernel_preserves_shape(self):
+        # 3x3 full-rank matrix -> trivial kernel (nullity 0).  The result
+        # must still report cols(M) "rows" (one empty tuple per column) so
+        # that downstream `matmul(M', basis_of_ker(M))` can rely on
+        # len(basis_of_ker(M)) == cols(M).  Returning a bare () here would
+        # break LinDivs.all_non_increasing, which slices and matmuls the
+        # kernel against basis_of_divmodule.
+        A = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        B = basis_of_ker(A)
+        assert len(B) == 3, "must have one row per column of M"
+        for row in B:
+            assert row == (), "each row is the empty zero-column basis"
+        # Downstream pipeline must accept this empty result without errors.
+        Mt = ((1, 2, 3), (4, 5, 6))   # shape (2, 3)
+        prod = matmul(Mt, B)
+        assert len(prod) == 2 and all(r == () for r in prod)
+        # column_style_hnf must also accept (m, 0) input.
+        H, _T = column_style_hnf(prod)
+        assert all(r == () for r in H)
+
+    def test_basis_of_ker_zero_columns_returns_empty(self):
+        # M with shape (k, 0): no columns, so the kernel space is Z^0 = {0}
+        # and the result is the empty tuple.
+        M = ((), (), ())
+        B = basis_of_ker(M)
+        assert B == ()
+
     def test_in_module(self):
         # Module spanned by (6,-1,0): exactly the integer multiples.
         gens = ((6, -1, 0),)
