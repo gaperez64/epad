@@ -837,6 +837,78 @@ def amp_loose_cycle(n: int, k: int = 1) -> LinDivs:
     return LinDivs(tuple(F), tuple(G))
 
 
+def bounded_amp(n: int, M: int) -> LinDivs:
+    """The amplifying chain CAPPED by x_n | (M*x_0): the cap tries to pin x_n
+    to a multiple of x_0 in every order, the sharpest attempt to force the
+    doubly-exp VALUE into the forced relation.
+
+    It cannot: the cap *bounds the amplification by the input* M.  The chain
+    forces x_{i+1} >= x_i(x_i+1), so for the cap to hold x_n must fit under
+    M*x_0 -- if M is below the chain's growth the system is UNSAT and collapses
+    to x=0; otherwise x_n is pinned to a value <= M and the forced relation
+    x_n = c*x_0 carries the coefficient c <= M, an INPUT constant.  So the node
+    size is O(bit-length(M)) = O(input size), exactly like cross(N)/phi(N):
+    compact relative to the input, never amplified past it.  EPAD cannot grow a
+    coefficient beyond an input cap."""
+    nv = n + 1
+
+    def vec(pairs, const=0):
+        v = [0] * (nv + 1)
+        for idx, c in pairs:
+            v[idx] = c
+        v[-1] = const
+        return tuple(v)
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(i, 1)]));        G.append(vec([(i + 1, 1)]))
+        F.append(vec([(i, 1)], 1));     G.append(vec([(i + 1, 1)]))
+    F.append(vec([(n, 1)]));            G.append(vec([(0, M)]))     # x_n|M x_0
+    return LinDivs(tuple(F), tuple(G))
+
+
+def twin_amp(n: int) -> LinDivs:
+    """Two amplifying chains a_0..a_n (idx 0..n) and b_0..b_n (idx n+1..2n+1)
+    sharing the base (a_0=b_0) and coupled at the top (a_n | b_n): an attempt to
+    force the doubly-exp RATIO b_n/a_n into L in every order.
+
+    It cannot, for a linearity reason.  A fixed relation a_n = c*b_n needs a
+    solution-independent ratio c, but a_n/b_n depends on the free chain bases;
+    the only way to fix it is to force the bases equal -- which is exactly what
+    the shared base does, sending BOTH chains down the same recurrence so that
+    a_i = b_i identically.  The top coupling is then satisfied by EQUALITY, a
+    unit relation (coefficient 1), not a doubly-exp ratio.  EPAD's linearity
+    forbids multiplying two amplified variables, so amplified values can never
+    be coupled into a fixed non-unit relation: the existential minimum is a unit
+    2-component relation for every n, while the doubly-exp coefficients appear
+    only in the worst order."""
+    nv = 2 * (n + 1)
+
+    def vec(pairs, const=0):
+        v = [0] * (nv + 1)
+        for idx, c in pairs:
+            v[idx] = c
+        v[-1] = const
+        return tuple(v)
+
+    def A(i):
+        return i
+
+    def B(i):
+        return (n + 1) + i
+
+    F, G = [], []
+    for i in range(n):
+        F.append(vec([(A(i), 1)]));     G.append(vec([(A(i + 1), 1)]))
+        F.append(vec([(A(i), 1)], 1));  G.append(vec([(A(i + 1), 1)]))
+        F.append(vec([(B(i), 1)]));     G.append(vec([(B(i + 1), 1)]))
+        F.append(vec([(B(i), 1)], 1));  G.append(vec([(B(i + 1), 1)]))
+    F.append(vec([(A(0), 1)]));         G.append(vec([(B(0), 1)]))  # a_0|b_0
+    F.append(vec([(B(0), 1)]));         G.append(vec([(A(0), 1)]))  # b_0|a_0
+    F.append(vec([(A(n), 1)]));         G.append(vec([(B(n), 1)]))  # a_n|b_n
+    return LinDivs(tuple(F), tuple(G))
+
+
 # --------------------------------------------------------------------------
 # Batch counterexample hunt.
 # --------------------------------------------------------------------------

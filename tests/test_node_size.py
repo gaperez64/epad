@@ -36,8 +36,9 @@ from experiments.node_size import (
     classify_repair_generator, classify_node_repair,
     chain, antonia, all_equal, doubling_chain, cross, cross_chain,
     phi_forces_value, forward_order, reverse_order, chain_solution,
-    twist_chain, cyclic_chain, amp_loose_cycle,
+    twist_chain, cyclic_chain, amp_loose_cycle, bounded_amp, twin_amp,
 )
+import z3
 
 
 def _require_ok(r):
@@ -509,3 +510,74 @@ def test_amp_loose_cycle_recurrence_only_in_worst_order():
     # Worst-order node size grows with n (the doubly-exp recurrence), while the
     # minimum stayed pinned at 1 above.
     assert worst[0] < worst[1] < worst[2]
+
+
+# --------------------------------------------------------------------------
+# Coupling amplified endpoints -- the sharpest attack, trying to force a
+# VALUE-sized (doubly-exp) coefficient into the existential minimum (the only
+# shape that would break the compact-stratum conjecture).  Both stay compact:
+#   * bounded_amp: a cap x_n|(M*x_0) bounds the amplification by the INPUT M --
+#     it either fits (forced coefficient <= M, input-sized) or collapses (M
+#     below the chain's growth is UNSAT);
+#   * twin_amp: two chains sharing a base follow the same recurrence, so the
+#     top coupling a_n|b_n is satisfied by EQUALITY -- a unit relation, not a
+#     doubly-exp ratio.  Linearity forbids coupling amplified values into a
+#     fixed non-unit relation.
+# --------------------------------------------------------------------------
+
+def _sat_positive(lds, lo):
+    """True/False/None: is lds satisfiable with every variable >= lo?"""
+    d = len(lds.F[0]) - 1
+    xs = [z3.Int(f"x{i}") for i in range(d)]
+    s = z3.Solver()
+    for x in xs:
+        s.add(x >= lo)
+    for i, (f, g) in enumerate(zip(lds.F, lds.G)):
+        k = z3.Int(f"k_{i}")
+        ef = z3.IntVal(int(f[-1])) + sum(int(f[j]) * xs[j] for j in range(d))
+        eg = z3.IntVal(int(g[-1])) + sum(int(g[j]) * xs[j] for j in range(d))
+        s.add(ef * k == eg)
+    s.set("timeout", 3000)
+    r = s.check()
+    return True if r == z3.sat else (False if r == z3.unsat else None)
+
+
+@pytest.mark.parametrize("M", [6, 12, 42])
+def test_bounded_amp_caps_amplification_at_input(M):
+    # With the minimal chain solution [1,2,6] (valid whenever 6 | M), the cap
+    # x_2|(M*x_0) is finitely repairable in every order, and the forced
+    # coefficient is bounded by the INPUT M -- node size O(bit-length(M)),
+    # input-sized, never the doubly-exp value.
+    sol = (1, 2, 6)
+    r = min_node_size_over_orders(bounded_amp(2, M), sol, metric="max_bits",
+                                  max_orders=24)
+    assert r["status"] == "ok"
+    assert r["n_increasing"] == r["n_orders"]        # every order repairable
+    assert r["min_L"]["max_abs"] <= M                # forced coef <= input cap
+    assert r["min_metric"] <= M.bit_length()         # node size O(input size)
+
+
+def test_bounded_amp_below_growth_collapses():
+    # A cap below the chain's growth (M=3 < chain top 6) makes the system
+    # UNSAT for positive values: the amplification cannot fit, so it collapses
+    # to x=0 rather than producing a doubly-exp value.
+    assert _sat_positive(bounded_amp(2, 3), 1) is False
+    assert _sat_positive(bounded_amp(2, 3), 0) is True      # all-zero only
+
+
+def test_twin_amp_couples_to_unit_relation():
+    # Two chains sharing a base follow the same recurrence (a_i=b_i), so the
+    # top coupling a_n|b_n is satisfied by EQUALITY: the existential minimum is
+    # a single unit 2-component relation (coefficient 1), while the doubly-exp
+    # coefficients appear only in the worst order.  n=1 (24 orders) suffices to
+    # show the separation; n=2 is 720 orders -- left to the family docstring.
+    n = 1
+    sol = chain_solution(n) + chain_solution(n)
+    r = min_node_size_over_orders(twin_amp(n), sol, metric="max_bits",
+                                  max_orders=5040)
+    assert r["status"] == "ok"
+    assert r["n_increasing"] == r["n_orders"]        # every order repairable
+    assert r["min_metric"] == 1                      # unit relation
+    assert r["min_L"]["max_abs"] == 1
+    assert r["min_L"]["ngen"] == 1
+    assert r["max_metric"] > r["min_metric"]         # worst order amplifies
