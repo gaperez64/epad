@@ -163,6 +163,39 @@ sat for each, and asserts the two verdicts agree. Both the
 normalization step (via `SIGALRM`) and every z3 check have explicit
 timeouts; trials whose verdicts are inconclusive are skipped.
 
+## Paper example generators
+
+`examples/paper/` contains two deterministic generators for the companion
+EPAD paper. They are paper-artifact helpers, not invocations of
+`LinDivs.norm` or `LinDivs.knf_norm`:
+
+- `fermat_ladder.py` checks the Fermat-product identity and emits the annotated
+  ladder figure used to explain the Mersenne multiplier construction.
+- `exact_one_toy.py` constructs the fixed three-variable Exact-1-in-3 example,
+  verifies its CRT congruences and prime-power divisibilities, checks `2H < K`,
+  exhaustively enumerates all eight sign vectors, and emits the corresponding
+  table.
+
+When this repository and `epad-nexp` are sibling checkouts, regenerate both
+LaTeX fragments with:
+
+```bash
+python3 examples/paper/generate_all.py
+```
+
+The default outputs are
+`../epad-nexp/generated/fermat_ladder.tex` and
+`../epad-nexp/generated/exact_one_toy.tex`. Each individual script also accepts
+`--output PATH` when the repositories are laid out differently. The generated
+files are deterministic and are committed in `epad-nexp`, so building the
+paper never reads across repository boundaries.
+
+Run the direct arithmetic tests with:
+
+```bash
+python3 -m pytest tests/test_paper_examples.py -q
+```
+
 ## Requirements to implement normalization
 Given a system of divisibilities and linear constraints, we can implement
 Lipshitz' transformation into increasing normal form if we have:
