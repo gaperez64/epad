@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Fermat ladder figure and coefficient samples for the paper."""
+"""Generate the Fermat ladder coefficient samples used in the paper."""
 
 from __future__ import annotations
 
@@ -39,35 +39,13 @@ def verify(max_height: int = 8) -> None:
 
 
 def render(t: int = 3) -> str:
-    """Render a standalone LaTeX fragment for the t-stage ladder."""
+    """Render the generated LaTeX coefficient macros."""
     if t != 3:
-        raise ValueError("the paper figure is intentionally fixed at t=3")
+        raise ValueError("the paper sample is intentionally fixed at t=3")
     verify(max_height=max(8, t))
-
-    values = [1]
-    for h in reversed(range(t)):
-        values.append(values[-1] * fermat_ratio(h))
 
     quotient_samples = ",".join(str(fermat_ratio(h)) for h in range(5))
     multiplier_samples = ",".join(str(mersenne_multiplier(j)) for j in range(1, 6))
-    node_lines = []
-    for index, value in enumerate(values):
-        suffix = "=r" if index == t else ""
-        placement = "" if index == 0 else f", right=18mm of y{index - 1}"
-        coefficient = "" if value == 1 else str(value)
-        node_lines.append(
-            f"  \\node[ladder{placement}] (y{index}) "
-            f"{{$y_{index}={coefficient}x{suffix}$}};"
-        )
-    edge_lines = []
-    for index in range(1, t + 1):
-        h = t - index
-        edge_lines.append(
-            f"  \\draw[-{{Latex[length=2mm]}}] (y{index - 1}) -- "
-            f"node[above, align=center] "
-            f"{{$\\times(2^{{2^{h}}}+1)$\\\\[-1mm]$={fermat_ratio(h)}$}} "
-            f"(y{index});"
-        )
 
     return "\n".join(
         [
@@ -75,20 +53,6 @@ def render(t: int = 3) -> str:
             "% Do not edit by hand; regenerate with generate_all.py.",
             f"\\providecommand{{\\FermatSurvivingQuotients}}{{\\({quotient_samples}\\)}}",
             f"\\providecommand{{\\MersenneProjectedCoefficients}}{{\\({multiplier_samples}\\)}}",
-            "\\begin{figure}[H]",
-            "\\centering",
-            "\\begin{tikzpicture}[",
-            "  every node/.style={font=\\small},",
-            "  ladder/.style={draw, rounded corners, inner sep=4pt}",
-            "]",
-            *node_lines,
-            *edge_lines,
-            "\\end{tikzpicture}",
-            "\\caption{The \\(t=3\\) Fermat ladder.  Each rung forces the displayed",
-            "ratio, so the product is \\(17\\cdot5\\cdot3=255=2^{2^3}-1\\)",
-            "although every written coefficient has polynomial bit length.}",
-            "\\label{fig:fermat-ladder}",
-            "\\end{figure}",
             "",
         ]
     )

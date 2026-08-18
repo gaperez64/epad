@@ -169,12 +169,12 @@ timeouts; trials whose verdicts are inconclusive are skipped.
 EPAD paper. They are paper-artifact helpers, not invocations of
 `LinDivs.norm` or `LinDivs.knf_norm`:
 
-- `fermat_ladder.py` checks the Fermat-product identity and emits the annotated
-  ladder figure used to explain the Mersenne multiplier construction.
+- `fermat_ladder.py` checks the Fermat-product identity and emits the
+  coefficient macros used for the inline Mersenne multiplier examples.
 - `exact_one_toy.py` constructs the fixed three-variable Exact-1-in-3 example,
   verifies its CRT congruences and prime-power divisibilities, checks `2H < K`,
   exhaustively enumerates all eight sign vectors, and emits the corresponding
-  table.
+  constants and compact nonfloating table.
 
 When this repository and `epad-nexp` are sibling checkouts, regenerate both
 LaTeX fragments with:
